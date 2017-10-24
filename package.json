@@ -1,0 +1,38 @@
+{
+  "name": "allrounder",
+  "version": "0.0.0",
+  "description": "It validate everything. From rest call to dbvalidation to system commands to unit tests. Just almost everything",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "bin": "bin/allrounder",
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/codeofnode/allrounder.git"
+  },
+  "bugs": {
+    "url": "https://github.com/codeofnode/allrounder/issues",
+    "email": "codeofnode@gmail.com"
+  },
+  "engines": {
+    "node": ">=4.8.4"
+  },
+  "keywords": [
+    "rest",
+    "unit",
+    "test",
+    "json",
+    "db",
+    "system",
+    "upload"
+  ],
+  "author": "Ramesh Kumar <codeofnode@gmail.com>",
+  "license": "MIT",
+  "homepage": "https://github.com/codeofnode/allrounder",
+  "dependencies": {
+    "json2server": "^0.1.19",
+    "jsonpath": "^1.0.0",
+    "mocha": "^4.0.1",
+    "mongodb": "^2.2.33"
+  }
+}

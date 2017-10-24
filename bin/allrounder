@@ -1,0 +1,177 @@
+#! /usr/bin/env node
+
+const { join } = require('path');
+const { mkdirSync, writeFileSync, readdirSync } = require('fs');
+const { methods } = require('json2server');
+const { request } = methods;
+const os = require('os');
+const cwd = process.cwd();
+const MochaProto = require('mocha');
+const mainFile = require('../index');
+
+const parse = function parse(cb){
+  var options = { };
+  var opts = process.argv.slice(2), showHelp;
+  var { name, version, description } = require('../package.json');
+
+  var getStringValue = function(inp, isPath){
+    try {
+      inp = JSON.parse(inp);
+    } catch (er) {
+      if (isPath) {
+        if(inp.charAt(0) === '/') {
+          return inp;
+        } else if (inp.indexOf('http') === 0) {
+          return new Promise((res, rej) => {
+            request(inp, (er, resp) => {
+              if (er) rej(er);
+              else res(resp && resp.parsed);
+            });
+          });
+        } else {
+          inp = join(cwd, inp);
+        }
+      }
+    }
+    return inp;
+  };
+
+  opts.forEach(function(arg){
+    if (showHelp === undefined) {
+      showHelp = false;
+    }
+    const ind = arg.indexOf('=');
+    let key = 'NO_ARGS';
+    if (ind === -1) {
+      if (arg.endsWith('.json')) {
+        options.file = getStringValue(arg, true);
+      } else {
+        options.jsondir = getStringValue(arg, true);
+      }
+      return;
+    } else {
+      key = arg.substr(0,ind), value = getStringValue(arg.substr(ind+1));
+    }
+    switch(key.toLowerCase()){
+      case '-f':
+      case '--file':
+        if(value) {
+          options.file = getStringValue(value, true);
+        }
+        break;
+      case '-r':
+      case '--read':
+        if(value) {
+          options.read = getStringValue(read, true);
+        }
+        break;
+      case '-j':
+      case '--jsondir':
+        if(value) {
+          options.jsondir = getStringValue(value, true);
+        }
+        break;
+      case '-s':
+      case '--steps':
+        if(value) {
+          let vls;
+          if (value.indexOf('-') > 0) {
+            vls = value.split('-').map(vl => parseInt(vl, 10));
+          } else if (value.indexOf(':') > 0) {
+            vls = value.split(':').map(vl => parseInt(vl, 10));
+          } else {
+            vls = [value];
+          }
+          const dt = [];
+          if (vls.length === 2 && vls[0] >= 0 &&
+            vls[1] >= 0 && vls[0] <= vls[1] && !isNaN(vls[0]) && !isNaN(vls[1])) {
+            for (var z = vls[0]; z <= vls[1]; z++) {
+              dt.push(z);
+            }
+          }
+          if (dt.length) {
+            options.steps = dt;
+          }
+        }
+        break;
+      case '-o':
+      case '--timeout':
+        if(value){
+          const vt = parseInt(value, 10);
+          if (!isNaN(vt)) {
+            options.timeout = vt;
+          }
+        }
+        break;
+      case '-t':
+      case '--type':
+        if(value){
+          if (value === 'rest' || value === 'unit') {
+            options.type = value;
+          }
+        }
+        break;
+      case '-d':
+      case '--debug':
+        if(value){
+          const vt = parseInt(value, 10);
+          if (!isNaN(vt)) {
+            options.debug = vt;
+          }
+        }
+        break;
+      case '-h':
+      case '--help':
+      default :
+        console.log('    --> INVALID ARGUMENT `'+key+'` PROVIDED ...! Try again with valid arguments.');
+        showHelp = true;
+    }
+  });
+
+  if(showHelp !== false){
+    console.log('\n    '+name+' - '+description+' .\n');
+    console.log('    version - '+version+'\n');
+    process.exit(2);
+  } else {
+    if (!options.read){
+      options.read = join(process.cwd(), 'allrounder.json');
+    }
+    const read = {};
+    try {
+      read = require(options.read);
+    } catch(er){
+      return options;
+    }
+    for(let ky in read){
+      const _ky = ky.toLowerCase();
+      if(!(options.hasOwnProperty(_ky))){
+        options[_ky] = read[ky];
+      }
+    }
+    if (options.file instanceof Promise) {
+      options.file.then(function(resp){
+        const tmpdir = options.jsondir || os.tmpdir();
+        mkdir(`/${tmpdir}/allroundtests`);
+        options.file = `/${tmpdir}/allroundtests/test.json`;
+        writeFileSync(options.file, JSON.stringify(resp, undefined, 2));
+        cb(options);
+      }).catch(function(er){
+        console.log(er);
+        process.exit(2);
+      });
+    } else {
+      cb(options);
+    }
+  }
+};
+
+parse(function(options) {
+  if (!options.jsondir) {
+    throw new Error('`jsondir` or `file` argument is a must.');
+  }
+  mainFile.init(options);
+  mocha = new MochaProto();
+  mocha.files = readdirSync(options.jsondir);
+  mocha.run();
+  mainFile.start();
+});
