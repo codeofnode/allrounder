@@ -9,7 +9,7 @@ module.exports = function forTC(OPTS, test, fileData, done, noti) {
     this.timeout(OPTS.replace(test.details.timeout, vars))
   }
   const callback = function callback(err, resp) {
-    postTC(OPTS, test, done, noti, err, resp);
+    postTC(OPTS, vars, test, done, noti, err, resp);
   };
   if (test.request) {
     const reqObj = OPTS.replace(test.request, vars);

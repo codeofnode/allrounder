@@ -1,11 +1,11 @@
-const { init } = require('./utils');
+const { getOptions } = require('./extractArgs');
 
 const OPTS = {
   fileArray: []
 };
 
 exports.init = function init(options) {
-  Object.assign(OPTS, init(options));
+  Object.assign(OPTS, getOptions(options));
 };
 
 exports.forTS = function forTS(fileData) {
@@ -30,7 +30,7 @@ exports.forTS = function forTS(fileData) {
   fileData[1].tests.forEach((test, ind) => {
     if (!OPTS.replace(test.details.disabled, vars) && (!OPTS.steps || OPTS.steps.indexOf(ind) !== -1)) {
       it(OPTS.replace(test.details.summary, vars), function(done) {
-        require(`./${test.valdationType || OPTS.type}`).call(this, OPTS, test, fileData, done, noti);
+        require(`./types/${test.valdationType || OPTS.type}`).call(this, OPTS, test, fileData, done, noti);
       });
     }
   });
