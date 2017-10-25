@@ -8,8 +8,9 @@ const { mkdirSync, writeFileSync, readdirSync } = require('fs');
 const utils = require('./utils');
 
 const options = { };
-const opts = process.argv.slice(2), showHelp;
+const opts = process.argv.slice(2);
 const { name, version, description } = require('./package.json');
+let showHelp;
 
 const getStringValue = function(inp, isPath){
   try {
