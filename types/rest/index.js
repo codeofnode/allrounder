@@ -11,31 +11,30 @@ module.exports = function forTC(OPTS, test, fileData, done, noti) {
   const callback = function callback(err, resp) {
     postTC(OPTS, vars, test, done, noti, err, resp);
   };
-  if (test.request) {
-    const reqObj = OPTS.replace(test.request, vars);
-    if (typeof reqObj.payloadStream === 'string') {
-      reqObj.payloadStream = createReadStream(reqObj.payloadStream);
-    }
-    noti(1, 'REQUEST', reqObj);
-    OPTS.request(reqObj, callback);
-  } else if (test.command) {
-    const cmdObj = OPTS.replace(test.command, vars);
-    noti(1, 'SYS_COMMAND', cmdObj);
-    if (cmdObj.prefix) {
-      cmdObj.exec = `${cmdObj.prefix} '${cmdObj.exec.split("'").join("\\'")}'`;
-    }
-    exec(cmdObj.exec, cmdObj.options, function(er, sto, ste) {
-      callback(er, {
-        stoutput : sto,
-        sterror : ste
+  const reqObj = OPTS.replace(test.request, vars);
+  switch (OPTS.replace(test.subtype, vars)) {
+    case 'db':
+      noti(1, 'DB_QUERY', reqObj);
+      require(`./dbconnectors/${reqObj.dbName}`)(reqObj, callback);
+      break;
+    case 'command':
+      noti(1, 'SYS_COMMAND', reqObj);
+      if (reqObj.prefix) {
+        reqObj.payload =
+          `${reqObj.prefix} '${reqObj.payload.split("'").join("\\'")}'`;
+      }
+      exec(reqObj.payload, reqObj.options, function(er, sto, ste) {
+        callback(er, {
+          stoutput : sto,
+          sterror : ste
+        });
       });
-    });
-  } else if (test.dbQuery && test.dbQuery.dbName) {
-    const dbQuery = OPTS.replace(test.dbQuery, vars);
-    noti(1, 'DB_QUERY', dbQuery);
-    require(`./dbconnectors/${dbQuery.dbName}`)(test.dbQuery, callback);
-  } else {
-    assert(1, 'Dummy test case');
-    done();
+      break;
+    default:
+      noti(1, 'REQUEST', reqObj);
+      if (typeof reqObj.payloadStream === 'string') {
+        reqObj.payloadStream = createReadStream(reqObj.payloadStream);
+      }
+      OPTS.request(reqObj, callback);
   }
 };

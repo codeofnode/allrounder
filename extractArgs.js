@@ -71,13 +71,13 @@ opts.forEach(function(arg){
       break;
     case '-b':
     case '--bail':
-      if(value) {
+      if(typeof value === 'number') {
         options.bail = getStringValue(value, true);
       }
       break;
     case '-i':
     case '--insecure':
-      if(value) {
+      if(typeof value === 'number') {
         options.insecure = getStringValue(value, true);
       }
       break;
@@ -124,10 +124,7 @@ opts.forEach(function(arg){
     case '-d':
     case '--debug':
       if(value){
-        const vt = parseInt(value, 10);
-        if (!isNaN(vt)) {
-          options.debug = vt;
-        }
+        options.debug = value;
       }
       break;
     case '-h':
@@ -154,7 +151,7 @@ if(showHelp !== false){
  * @param {String} options.file to validate only one json file
  * @param {String} options.type what kind of validation is it
  * @param {Number} options.bail whether to bail on first failure
- * @param {Number} options.debug whether to console all the requests
+ * @param {String} options.debug whether to console all the requests
  * @param {Function} options.logger logger to log the requests and all
  * @param {Function} options.request function to make the http(s) requests
  * @param {Function} options.jsonquery function to make the http(s) requests
@@ -218,13 +215,13 @@ exports.getOptions = function getOptions(options) {
   } else {
     OPTS.type = 'rest';
   }
-  if (typeof options.debug === 'number' && !isNaN(options.debug)) {
+  if (typeof options.debug === 'string' && options.debug.length) {
     OPTS.debug = options.debug;
   } else {
-    OPTS.debug = 0;
+    OPTS.debug = '';
   }
 
-  OPTS.logger = ((typeof options.logger === 'function') ? options : utils).logger.bind(utils, options.debug);
+  OPTS.logger = ((typeof options.logger === 'function') ? options : utils).logger;
   OPTS.request = ((typeof options.request === 'function') ? options : utils).request;
   OPTS.replace = ((typeof options.replace === 'function') ? options : utils).replace;
   OPTS.jsonquery = ((typeof options.jsonquery === 'function') ? options : utils).jsonquery;

@@ -12,7 +12,7 @@ const { MongoClient, ObjectId } = require('mongodb');
       "connection": "options"
     }
   },
-  "params" :{
+  "paylaod" :{
     "collection" : "<Collection Name>",
     "command" : "<function to call, eg findOne, find, remove, update etc>",
     "args" : "<Array or object as parameters object passed into db query, eg [{ "$where" : "blah blah" },{ $set : { setIt : true } }]>",
@@ -28,7 +28,7 @@ module.exports = function mongodb(vars, next) {
     if (!connectionMap.hasOwnProperty(vars.connectionName)) {
       connectionMap[vars.connectionName] = con;
     }
-    const query = vars.params;
+    const query = vars.payload;
     if(ert) {
       next({ message : ert.message || ert, status : 400 });
     } else {

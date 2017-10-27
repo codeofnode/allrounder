@@ -37,9 +37,5 @@ const resolveFile = function resolveFile(cb){
 };
 
 resolveFile(function(){
-  mocha.run(function(failures){
-    process.on('exit', function () {
-      process.exit(failures);
-    });
-  });
+  mocha.run(process.exit.bind(process));
 });

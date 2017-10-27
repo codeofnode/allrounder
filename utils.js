@@ -5,14 +5,26 @@ const { replace, request } = methods;
 
 /**
  * Logger to log the request/command and response
- * @param {Number} debugLevel the level provided as input
- * @param {Number} minLevel minimum level that is required to log
+ * @param {String} debug the things to debug
  * @param {String} header header to print before the log
  * @param {Object} data the log data
  */
-exports.logger = function logger(debugLevel, minLevel, header, data) {
-  if (debugLevel >= minLevel) {
-    console.log(`${header} => \n`, data);
+exports.logger = function logger(debug, header, data) {
+  if (debug) {
+    const hdr = ` ==> ${header}`;
+    let qr = '';
+    let toDebug = false;
+    debug.split(',').forEach((db) => {
+      let queryVal = exports.jsonquery(data, db);
+      if (queryVal !== undefined) {
+        qr += `${db} => \n${JSON.stringify(queryVal, undefined, 2)}\n`;
+        toDebug = true;
+      }
+    });
+    if (toDebug) {
+      console.log(hdr);
+      console.log(qr);
+    }
   }
 };
 
