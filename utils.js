@@ -1,7 +1,7 @@
 const jsonpath = require('jsonpath');
 const assert = require('assert');
 const { methods } = require('json2server');
-const { replace, request } = methods;
+const { replace, request, stringify } = methods;
 
 /**
  * Logger to log the request/command and response
@@ -17,7 +17,7 @@ exports.logger = function logger(debug, header, data) {
     debug.split(',').forEach((db) => {
       let queryVal = exports.jsonquery(data, db);
       if (queryVal !== undefined) {
-        qr += `${db} => \n${JSON.stringify(queryVal, undefined, 2)}\n`;
+        qr += `${db} => \n${stringify(queryVal, true)}\n`;
         toDebug = true;
       }
     });
@@ -25,6 +25,15 @@ exports.logger = function logger(debug, header, data) {
       console.log(hdr);
       console.log(qr);
     }
+  }
+};
+
+exports.cropString = function cropString(str, ln = 100) {
+  const st = stringify(str);
+  if (st.length > ln) {
+    return st.substring(0, ln-4) + ' ...';
+  } else {
+    return st;
   }
 };
 
@@ -41,7 +50,7 @@ exports.request = request;
 exports.replace = replace;
 exports.noop = function() { };
 
-exports.postTC = function(OPTS, vars, test, done, noti, err, resp) {
+exports.postTC = function(OPTS, vars, methods, test, done, noti, err, resp) {
   const mainResp = err || resp;
   noti(2, 'RESPONSE', mainResp);
   if (typeof test.assertions === 'object' && test.assertions !== null) {
@@ -49,7 +58,7 @@ exports.postTC = function(OPTS, vars, test, done, noti, err, resp) {
     let ln = asar.length;
     for (let z = 0, key; z < ln; z++) {
       key = asar[z];
-      assert.deepEqual(OPTS.replace(test.assertions[key], vars), OPTS.jsonquery(mainResp, OPTS.replace(key, vars)));
+      assert.deepEqual(OPTS.replace(test.assertions[key], vars, methods), OPTS.jsonquery(mainResp, OPTS.replace(key, vars, methods)));
     }
   }
   if (typeof test.extractors === 'object' && test.extractors !== null) {
@@ -57,7 +66,7 @@ exports.postTC = function(OPTS, vars, test, done, noti, err, resp) {
     let ln = asar.length;
     for (let z = 0, key; z < ln; z++) {
       key = asar[z];
-      vars[OPTS.replace(key, vars)] = OPTS.jsonquery(mainResp, OPTS.replace(test.extractors[key], vars));
+      vars[OPTS.replace(key, vars, methods)] = OPTS.jsonquery(mainResp, OPTS.replace(test.extractors[key], vars, methods));
     }
   }
   done();

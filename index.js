@@ -1,4 +1,6 @@
 const { getOptions } = require('./extractArgs');
+const { cropString } = require('./utils');
+const { URL } = require('url');
 
 const OPTS = {
   fileArray: []
@@ -8,8 +10,8 @@ exports.init = function init(options) {
   Object.assign(OPTS, getOptions(options));
 };
 
-function getDebug(ob, OPTS, vars) {
-  return OPTS.replace(ob.details.debug, vars);
+function getDebug(ob, OPTS, vars, methods) {
+  return OPTS.replace(ob.details.debug, vars, methods);
 }
 
 function getFinalDebug(tc, ts, main) {
@@ -24,11 +26,13 @@ exports.forTS = function forTS(fileData) {
     this.timeout(OPTS.timeout);
   }
   const vars = fileData[1].vars;
+  const methods = fileData[2];
+  vars.LOOPING_ARRAY = [];
   if (!fileData[1].details) fileData[1].details = {};
   const mainDebug = getDebug(fileData[1], OPTS, vars);
   Object.keys(vars).forEach((ky) => {
-    const nk = OPTS.replace(ky, vars);
-    vars[nk] = OPTS.replace(vars[ky], vars);
+    const nk = OPTS.replace(ky, vars, methods);
+    vars[nk] = OPTS.replace(vars[ky], vars, methods);
     if (nk !== ky) {
       delete vars[ky];
     }
@@ -40,15 +44,70 @@ exports.forTS = function forTS(fileData) {
     OPTS.notifier(`${pre}_TESTCASE:${kind}`, obj, vars);
   };
   OPTS.notifier('PRE_TEST_SUITE', fileData, vars, OPTS);
-  fileData[1].tests.forEach((test, ind) => {
-    if (!test.details) test.details = {};
-    if (!OPTS.replace(test.details.disabled, vars) && (!OPTS.steps || OPTS.steps.indexOf(ind) !== -1)) {
-      it(OPTS.replace(test.details.summary, vars), function(done) {
-        const currDebug = getDebug(test, OPTS, vars);
-        require(`./types/${test.valdationType || OPTS.type}`).call(this, OPTS, test, fileData, done, noti.bind(OPTS, getFinalDebug(currDebug, mainDebug, OPTS.debug)));
-      });
+  const ln = fileData[1].tests.length;
+  function runATest(ind, maxInd) {
+    if (ind < (maxInd || ln) && ind < ln) {
+      const test = fileData[1].tests[ind];
+      if (!test.details) test.details = {};
+      function getSummary(){
+        return test.details.summary
+          ? OPTS.replace(test.details.summary, vars, methods)
+          : test.request
+            ? cropString(test.request.url || test.request.payload || 'some unknown test')
+            : 'No Summary';
+      }
+      let batch = 1;
+      if (!OPTS.replace(test.details.disabled, vars, methods) && (!OPTS.steps || OPTS.steps.indexOf(ind) !== -1)) {
+        let looping = OPTS.replace(test.looping, vars, methods);
+        if (looping === undefined || looping === null || looping) {
+          function execTest(that, shouldClone, inde, done) {
+            vars.$ = inde;
+            let condition = OPTS.replace(test.condition, vars, methods);
+            if (condition !== undefined) {
+              if (!condition || (typeof condition === 'string' && !eval(condition))) {
+                return done();
+              }
+            }
+            that.shouldClone = shouldClone;
+            const currDebug = getDebug(test, OPTS, vars, methods);
+            require(`./types/${test.valdationType || OPTS.type}`)
+              .call(that, OPTS, test, fileData, done, noti.bind(OPTS, getFinalDebug(currDebug, mainDebug, OPTS.debug)));
+          }
+          if (maxInd) {
+            let nowInd = vars.$;
+            it(getSummary(), function(done) { execTest(this, true, nowInd, done); });
+            return runATest(ind+1, maxInd);
+          } else {
+            if (typeof looping === 'object' && looping !== null) {
+              if (!Array.isArray(looping) && looping.batch) {
+                const bth = parseInt(OPTS.replace(looping.batch, vars, methods), 10);
+                if (!isNaN(bth) && bth > 0 && bth) {
+                  batch = bth;
+                }
+                looping = OPTS.replace(looping.source, vars, methods);
+              }
+            }
+            looping = (looping === undefined || looping === null || looping);
+            if (typeof looping === 'number') looping = Array.apply(null, Array(looping)).map((x, i) => i);
+            else if (!Array.isArray(looping)) looping = [looping];
+            vars.LOOPING_ARRAY = looping;
+            looping.forEach((lp, lin) => {
+              vars.$ = lin;
+              let shouldClone = batch > 1;
+              it(getSummary(), function(done){ execTest(this, shouldClone, lin, done); });
+              if (batch > 1) {
+                runATest(ind + 1, ind + batch);
+              }
+            });
+          }
+        }
+      }
+      batch--;
+      runATest(ind + batch + 1);
     }
-  });
+  }
+  vars.LOOPING_ARRAY = [];
+  runATest(0);
   OPTS.notifier('POST_TEST_SUITE', fileData, vars, OPTS);
 };
 

@@ -5,25 +5,27 @@ const { postTC } = require('../../utils');
 
 module.exports = function forTC(OPTS, test, fileData, done, noti) {
   const vars = fileData[1].vars;
+  const methods = fileData[2];
   if (test.details.timeout) {
-    this.timeout(OPTS.replace(test.details.timeout, vars))
+    this.timeout(OPTS.replace(test.details.timeout, vars, methods));
   }
   const callback = function callback(err, resp) {
-    postTC(OPTS, vars, test, done, noti, err, resp);
+    postTC(OPTS, vars, methods, test, done, noti, err, resp);
   };
-  const reqObj = OPTS.replace(test.request, vars);
-  switch (OPTS.replace(test.subtype, vars)) {
+  const input = this.shouldClone ? JSON.parse(JSON.stringify(test.request)) : test.request;
+  const reqObj = OPTS.replace(input, vars, methods);
+  switch (OPTS.replace(test.subtype, vars, methods)) {
     case 'db':
       noti(1, 'DB_QUERY', reqObj);
       require(`./dbconnectors/${reqObj.dbName}`)(reqObj, callback);
       break;
     case 'command':
       noti(1, 'SYS_COMMAND', reqObj);
+      let payl = reqObj.payload;
       if (reqObj.prefix) {
-        reqObj.payload =
-          `${reqObj.prefix} '${reqObj.payload.split("'").join("\\'")}'`;
+        payl = `${reqObj.prefix} '${reqObj.payload.split("'").join("\\'")}'`;
       }
-      exec(reqObj.payload, reqObj.options, function(er, sto, ste) {
+      exec(payl, reqObj.options, function(er, sto, ste) {
         callback(er, {
           stoutput : sto,
           sterror : ste

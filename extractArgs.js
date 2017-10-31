@@ -177,7 +177,7 @@ exports.getOptions = function getOptions(options) {
   }
 
   if (typeof options.file === 'string' && options.file.length) {
-    OPTS.fileArray = [[basename(options.file), require(options.file)]];
+    OPTS.fileArray = [[basename(options.file), require(options.file), { EVAL: eval }]];
   } else if (typeof options.jsondir === 'string' && options.jsondir.length) {
     OPTS.fileArray = readdirSync(options.jsondir)
       .filter(fn => fn.endsWith('.json'))
@@ -191,6 +191,7 @@ exports.getOptions = function getOptions(options) {
         } catch(er) {
           ar.push({});
         }
+        if (typeof ar[2].EVAL !== 'function') ar[2].EVAL = eval;
         return ar;
       });
   } else if (!(options.file instanceof Promise)) {

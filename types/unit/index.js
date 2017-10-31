@@ -9,26 +9,17 @@ exports.init = function init(options) {
   Object.assign(OPTS, init(options));
 };
 
-let todoMethodsForReplace = true;
-let preRep;
-
 module.exports = function forTC(OPTS, test, fileData, done, noti) {
   const vars = fileData[1].vars;
-  if (todoMethodsForReplace) {
-    todoMethodsForReplace = false;
-    preRep = OPTS.replace;
-    OPTS.replace = function(source, vrs) {
-      return preRep(source, vrs, methods);
-    };
-  }
+  const methods = fileData[2];
   if (test.details.timeout) {
-    this.timeout(OPTS.replace(test.details.timeout, vars));
+    this.timeout(OPTS.replace(test.details.timeout, vars, methods));
   }
   const callback = function callback(err, resp) {
-    postTC(OPTS, vars, test, done, noti, err, resp);
+    postTC(OPTS, vars, methods, test, done, noti, err, resp);
   };
   let unit;
-  try { unit = require(OPTS.replace(test.require, vars)); } catch (er) { }
+  try { unit = require(OPTS.replace(test.require, vars, methods)); } catch (er) { }
   const ln = test.assertions.length;
   const errors = new Array(ln);
   const outputs = new Array(ln);
@@ -37,7 +28,7 @@ module.exports = function forTC(OPTS, test, fileData, done, noti) {
     let context;
     let source;
     if (ass.context) {
-      context = OPTS.jsonquery(ass.context.global ? global : unit, OPTS.replace(ass.context.path, vars));
+      context = OPTS.jsonquery(ass.context.global ? global : unit, OPTS.replace(ass.context.path, vars, methods));
     } else {
       context = global;
     }
@@ -47,13 +38,13 @@ module.exports = function forTC(OPTS, test, fileData, done, noti) {
       source = unit;
     }
     if (ass.method) {
-      const method = OPTS.jsonquery(source, OPTS.replace(ass.method, vars));
+      const method = OPTS.jsonquery(source, OPTS.replace(ass.method, vars, methods));
       if (typeof method !== 'function') {
         throw new Error(`${ass.method}: Not a function`);
       }
       let params = [];
       if (ass.params !== undefined) {
-        params = OPTS.replace(Array.isArray(ass.params) ? ass.params : [ass.params], vars);
+        params = OPTS.replace(Array.isArray(ass.params) ? ass.params : [ass.params], vars, methods);
       }
       const output = method.apply(context, params);
       const asar = Object.keys(ass.checks);
