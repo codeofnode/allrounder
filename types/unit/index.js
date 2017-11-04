@@ -12,9 +12,6 @@ exports.init = function init(options) {
 module.exports = function forTC(OPTS, test, fileData, done, noti) {
   const vars = fileData[1].vars;
   const methods = fileData[2];
-  if (test.details.timeout) {
-    this.timeout(OPTS.replace(test.details.timeout, vars, methods));
-  }
   const callback = function callback(err, resp) {
     postTC(OPTS, vars, methods, test, done, noti, err, resp);
   };

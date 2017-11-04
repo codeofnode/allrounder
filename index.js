@@ -11,7 +11,7 @@ exports.init = function init(options) {
 };
 
 function getDebug(ob, OPTS, vars, methods) {
-  return OPTS.replace(ob.details.debug, vars, methods);
+  return OPTS.replace(ob.debug, vars, methods);
 }
 
 function getFinalDebug(tc, ts, main) {
@@ -28,7 +28,6 @@ exports.forTS = function forTS(fileData) {
   const vars = fileData[1].vars;
   const methods = fileData[2];
   vars.LOOPING_ARRAY = [];
-  if (!fileData[1].details) fileData[1].details = {};
   const mainDebug = getDebug(fileData[1], OPTS, vars);
   Object.keys(vars).forEach((ky) => {
     const nk = OPTS.replace(ky, vars, methods);
@@ -48,30 +47,46 @@ exports.forTS = function forTS(fileData) {
   function runATest(ind, maxInd) {
     if (ind < (maxInd || ln) && ind < ln) {
       const test = fileData[1].tests[ind];
-      if (!test.details) test.details = {};
       function getSummary(){
-        return test.details.summary
-          ? OPTS.replace(test.details.summary, vars, methods)
+        return test.summary
+          ? OPTS.replace(test.summary, vars, methods)
           : test.request
             ? cropString(test.request.url || test.request.payload || 'some unknown test')
             : 'No Summary';
       }
       let batch = 1;
-      if (!OPTS.replace(test.details.disabled, vars, methods) && (!OPTS.steps || OPTS.steps.indexOf(ind) !== -1)) {
+      if (!OPTS.replace(test.disabled, vars, methods) && (!OPTS.steps || OPTS.steps.indexOf(ind) !== -1)) {
         let looping = OPTS.replace(test.looping, vars, methods);
         if (looping === undefined || looping === null || looping) {
           function execTest(that, shouldClone, inde, done) {
-            vars.$ = inde;
-            let condition = OPTS.replace(test.condition, vars, methods);
-            if (condition !== undefined) {
-              if (!condition || (typeof condition === 'string' && !eval(condition))) {
-                return done();
+            let sleep = OPTS.replace(test.sleep, vars, methods);
+            let tto = OPTS.replace(test.timeout, vars, methods);
+            function execNow() {
+              vars.$ = inde;
+              let condition = OPTS.replace(test.condition, vars, methods);
+              if (condition !== undefined) {
+                if (!condition || (typeof condition === 'string' && !eval(condition))) {
+                  return done();
+                }
               }
+              that.shouldClone = shouldClone;
+              const currDebug = getDebug(test, OPTS, vars, methods);
+              require(`./types/${test.type || OPTS.type}`)
+                .call(that, OPTS, test, fileData, done, noti.bind(OPTS, getFinalDebug(currDebug, mainDebug, OPTS.debug)));
             }
-            that.shouldClone = shouldClone;
-            const currDebug = getDebug(test, OPTS, vars, methods);
-            require(`./types/${test.valdationType || OPTS.type}`)
-              .call(that, OPTS, test, fileData, done, noti.bind(OPTS, getFinalDebug(currDebug, mainDebug, OPTS.debug)));
+            if (typeof sleep !== 'number' || sleep < 1 || isNaN(sleep)) {
+              sleep = false;
+            }
+            if (typeof tto !== 'number' || tto < 1 || isNaN(tto)) {
+              tto = false;
+            }
+            if (sleep) {
+              if (tto) that.timeout(sleep + tto);
+              setTimeout(execNow, sleep);
+            } else {
+              if (tto) that.timeout(tto);
+              execNow();
+            }
           }
           if (maxInd) {
             let nowInd = vars.$;
@@ -114,7 +129,7 @@ exports.forTS = function forTS(fileData) {
 exports.start = function start(){
   OPTS.fileArray.forEach((fileData) => {
     const flnm = fileData[0].split('.').shift();
-    if (!fileData[1].details.disabled && (!OPTS.file || OPTS.file === flnm)) {
+    if (!fileData[1].disabled && (!OPTS.file || OPTS.file === flnm)) {
       describe(flnm, function(){
         exports.forTS.call(this, fileData);
       });

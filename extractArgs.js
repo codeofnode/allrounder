@@ -4,20 +4,34 @@ const EventEmitter = require('events');
 const { request } = methods;
 const cwd = process.cwd();
 const os = require('os');
-const { mkdirSync, writeFileSync, readdirSync } = require('fs');
+const { mkdirSync, readdirSync } = require('fs');
 const utils = require('./utils');
 
 const options = { };
 const opts = process.argv.slice(2);
 const { name, version, description } = require('./package.json');
 let showHelp;
+let parsingDone = false;
+
+function getObjectFromFileOrArgument (inp) {
+  if (inp === 'string') {
+    if (inp.endsWith('.json')) {
+      try {
+        return require(getStringValue(inp, true));
+      } catch (er) {
+      }
+    }
+    return JSON.parse(inp);
+  }
+  return inp;
+};
 
 const getStringValue = function(inp, isPath){
   try {
     inp = JSON.parse(inp);
   } catch (er) {
     if (isPath) {
-      if(inp.charAt(0) === '/') {
+      if (inp.charAt(0) === '/') {
         return inp;
       } else if (inp.indexOf('http') === 0) {
         return new Promise((res, rej) => {
@@ -34,12 +48,84 @@ const getStringValue = function(inp, isPath){
   return inp;
 };
 
-opts.forEach(function(arg){
+function parseReq(splits) {
+  parsingDone = true;
+  if (!splits.length) return parsingDone = false;
+  if (splits[0].indexOf('=') > 1) {
+    options.type = splits[0].split('=').pop();
+  } else {
+    options.type = 'rest';
+  }
+  const request = {};
+  switch(options.type) {
+    case 'command':
+      request.payload = splits[1];
+      if (splits[2]) {
+        request.options = getObjectFromFileOrArgument(splits[2]);
+      }
+      if (!options.debug) {
+        options.debug = 'payload,output,error';
+      }
+      break;
+    case 'db':
+      request.dbName = splits[1];
+      request.connectionName = splits[2];
+      if (splits[3]) {
+        request.payload = getObjectFromFileOrArgument(splits[3]);
+      }
+      if (splits[4]) {
+        request.dbConfig = getObjectFromFileOrArgument(splits[4]);
+      }
+      if (!options.debug) {
+        options.debug = 'payload,output,message';
+      }
+      break;
+    default:
+      if (splits[1].indexOf('http') === 0) {
+        splits.unshift('GET');
+      }
+      request.method = splits[1];
+      request.url = splits[2];
+      if (splits[3]) {
+        request.headers = getObjectFromFileOrArgument(splits[3]);
+      }
+      if (splits[4]) {
+        request.payload = getObjectFromFileOrArgument(splits[4]);
+      }
+      if (splits[5]) {
+        request.payloadStream = splits[5];
+      }
+      if (splits[6]) {
+        request.multipartOptions = getObjectFromFileOrArgument(splits[6]);
+      }
+      if (!options.debug) {
+        options.debug = 'url,payload,parsed';
+      }
+  }
+  let vrs = {};
+  if (typeof options.vars === 'object' && options.vars !== null) {
+    vrs = options.vars;
+  }
+  options.file = new Promise((res, rej) => {
+    res({
+      vars: vrs,
+      tests: [{ request: request }]
+    });
+  });
+}
+
+opts.forEach(function(arg, oind){
   if (showHelp === undefined) {
     showHelp = false;
   }
+  if (parsingDone) return;
   const ind = arg.indexOf('=');
-  let key = 'NO_ARGS';
+  const larg = arg.toLowerCase();
+  const value = getStringValue(arg.substr(ind+1));
+  const key = arg.substr(0, ind) || larg;
+  if (key === '-e' || key === '--exec') {
+    return parseReq(opts.slice(oind));
+  }
   if (ind === -1) {
     if (arg.endsWith('.json')) {
       options.file = getStringValue(arg, true);
@@ -47,43 +133,47 @@ opts.forEach(function(arg){
       options.jsondir = getStringValue(arg, true);
     }
     return;
-  } else {
-    key = arg.substr(0,ind), value = getStringValue(arg.substr(ind+1));
   }
   switch(key.toLowerCase()){
     case '-f':
     case '--file':
-      if(value) {
+      if (value) {
         options.file = getStringValue(value, true);
       }
       break;
     case '-r':
     case '--read':
-      if(value) {
+      if (value) {
         options.read = getStringValue(read, true);
       }
       break;
     case '-j':
     case '--jsondir':
-      if(value) {
+      if (value) {
         options.jsondir = getStringValue(value, true);
       }
       break;
     case '-b':
     case '--bail':
-      if(typeof value === 'number') {
-        options.bail = getStringValue(value, true);
+      if (typeof value === 'number') {
+        options.bail = value;
       }
       break;
     case '-i':
     case '--insecure':
-      if(typeof value === 'number') {
-        options.insecure = getStringValue(value, true);
+      if (typeof value === 'number') {
+        options.insecure = value;
+      }
+      break;
+    case '-v':
+    case '--vars':
+      if (value) {
+        options.vars = getObjectFromFileOrArgument(value);
       }
       break;
     case '-s':
     case '--steps':
-      if(value) {
+      if (value) {
         let vls;
         if (value.indexOf('-') > 0) {
           vls = value.split('-').map(vl => parseInt(vl, 10));
@@ -106,7 +196,7 @@ opts.forEach(function(arg){
       break;
     case '-o':
     case '--timeout':
-      if(value){
+      if (value){
         const vt = parseInt(value, 10);
         if (!isNaN(vt)) {
           options.timeout = vt;
@@ -115,15 +205,13 @@ opts.forEach(function(arg){
       break;
     case '-t':
     case '--type':
-      if(value){
-        if (value === 'rest' || value === 'unit') {
-          options.type = value;
-        }
+      if (value){
+        options.type = value;
       }
       break;
     case '-d':
     case '--debug':
-      if(value){
+      if (value){
         options.debug = value;
       }
       break;
@@ -135,7 +223,7 @@ opts.forEach(function(arg){
   }
 });
 
-if(showHelp !== false){
+if (showHelp !== false){
   console.log('\n    '+name+' - '+description+' .\n');
   console.log('    version - '+version+'\n');
   process.exit(2);
@@ -171,7 +259,7 @@ exports.getOptions = function getOptions(options) {
   }
   for(let ky in read){
     const _ky = ky.toLowerCase();
-    if(!(OPTS.hasOwnProperty(_ky))){
+    if (!(OPTS.hasOwnProperty(_ky))){
       OPTS[_ky] = read[ky];
     }
   }
@@ -220,6 +308,12 @@ exports.getOptions = function getOptions(options) {
     OPTS.debug = options.debug;
   } else {
     OPTS.debug = '';
+  }
+
+  if (typeof options.vars === 'object' && options.vars !== null) {
+    OPTS.vars = options.vars;
+  } else {
+    delete OPTS.vars;
   }
 
   OPTS.logger = ((typeof options.logger === 'function') ? options : utils).logger;

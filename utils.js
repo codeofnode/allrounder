@@ -50,6 +50,18 @@ exports.request = request;
 exports.replace = replace;
 exports.noop = function() { };
 
+exports.getReqObj = function(that, OPTS, test, fileData, done, noti) {
+  const vars = fileData[1].vars;
+  const methods = fileData[2];
+  const input = that.shouldClone ? JSON.parse(JSON.stringify(test.request)) : test.request;
+  return {
+    reqObj: OPTS.replace(input, vars, methods),
+    callback: function callback(err, resp) {
+      exports.postTC(OPTS, vars, methods, test, done, noti, err, resp);
+    }
+  };
+};
+
 exports.postTC = function(OPTS, vars, methods, test, done, noti, err, resp) {
   const mainResp = err || resp;
   noti(2, 'RESPONSE', mainResp);
