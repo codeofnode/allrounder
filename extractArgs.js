@@ -82,7 +82,7 @@ function parseReq(splits) {
       break;
     default:
       if (splits[1].indexOf('http') === 0) {
-        splits.unshift('GET');
+        splits.splice(1, 0, 'GET');
       }
       request.method = splits[1];
       request.url = splits[2];
