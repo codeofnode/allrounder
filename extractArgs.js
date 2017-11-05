@@ -115,14 +115,14 @@ function parseReq(splits) {
 }
 
 opts.forEach(function(arg, oind){
+  if (parsingDone) return;
   if (showHelp === undefined) {
     showHelp = false;
   }
-  if (parsingDone) return;
   const ind = arg.indexOf('=');
   const larg = arg.toLowerCase();
   const value = getStringValue(arg.substr(ind+1));
-  const key = arg.substr(0, ind) || larg;
+  const key = larg.substr(0, ind) || larg;
   if (key === '-e' || key === '--exec') {
     return parseReq(opts.slice(oind));
   }
@@ -132,9 +132,8 @@ opts.forEach(function(arg, oind){
     } else {
       options.jsondir = getStringValue(arg, true);
     }
-    return;
   }
-  switch(key.toLowerCase()){
+  switch(key){
     case '-f':
     case '--file':
       if (value) {
@@ -165,7 +164,7 @@ opts.forEach(function(arg, oind){
         options.insecure = value;
       }
       break;
-    case '-v':
+    case '-z':
     case '--vars':
       if (value) {
         options.vars = getObjectFromFileOrArgument(value);
@@ -217,6 +216,11 @@ opts.forEach(function(arg, oind){
       break;
     case '-h':
     case '--help':
+    case '-v':
+    case '--version':
+      parsingDone = true;
+      showHelp = true;
+      break;
     default :
       console.log('    --> INVALID ARGUMENT `'+key+'` PROVIDED ...! Try again with valid arguments.');
       showHelp = true;

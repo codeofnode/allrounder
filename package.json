@@ -1,6 +1,6 @@
 {
   "name": "allrounder",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "It validate everything. From rest call to dbvalidation to system commands to unit tests. Just almost everything",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -30,7 +30,7 @@
   "license": "MIT",
   "homepage": "https://github.com/codeofnode/allrounder",
   "dependencies": {
-    "json2server": "^0.1.21",
+    "json2server": "^0.1.22",
     "jsonpath": "^1.0.0",
     "mocha": "^4.0.1",
     "mongodb": "^2.2.33"
