@@ -114,123 +114,125 @@ function parseReq(splits) {
   });
 }
 
-opts.forEach(function(arg, oind){
-  if (parsingDone) return;
-  if (showHelp === undefined) {
-    showHelp = false;
-  }
-  const ind = arg.indexOf('=');
-  const larg = arg.toLowerCase();
-  const value = getStringValue(arg.substr(ind+1));
-  const key = larg.substr(0, ind) || larg;
-  if (key === '-e' || key === '--exec') {
-    return parseReq(opts.slice(oind));
-  }
-  if (ind === -1) {
-    if (arg.endsWith('.json')) {
-      options.file = getStringValue(arg, true);
-    } else {
-      options.jsondir = getStringValue(arg, true);
+function parseArguments() {
+  opts.forEach(function(arg, oind){
+    if (parsingDone) return;
+    if (showHelp === undefined) {
+      showHelp = false;
     }
-  }
-  switch(key){
-    case '-f':
-    case '--file':
-      if (value) {
-        options.file = getStringValue(value, true);
+    const ind = arg.indexOf('=');
+    const larg = arg.toLowerCase();
+    const value = getStringValue(arg.substr(ind+1));
+    const key = larg.substr(0, ind) || larg;
+    if (key === '-e' || key === '--exec') {
+      return parseReq(opts.slice(oind));
+    }
+    if (ind === -1) {
+      if (arg.endsWith('.json')) {
+        options.file = getStringValue(arg, true);
+      } else {
+        options.jsondir = getStringValue(arg, true);
       }
-      break;
-    case '-r':
-    case '--read':
-      if (value) {
-        options.read = getStringValue(read, true);
-      }
-      break;
-    case '-j':
-    case '--jsondir':
-      if (value) {
-        options.jsondir = getStringValue(value, true);
-      }
-      break;
-    case '-b':
-    case '--bail':
-      if (typeof value === 'number') {
-        options.bail = value;
-      }
-      break;
-    case '-i':
-    case '--insecure':
-      if (typeof value === 'number') {
-        options.insecure = value;
-      }
-      break;
-    case '-z':
-    case '--vars':
-      if (value) {
-        options.vars = getObjectFromFileOrArgument(value);
-      }
-      break;
-    case '-s':
-    case '--steps':
-      if (value) {
-        let vls;
-        if (value.indexOf('-') > 0) {
-          vls = value.split('-').map(vl => parseInt(vl, 10));
-        } else if (value.indexOf(':') > 0) {
-          vls = value.split(':').map(vl => parseInt(vl, 10));
-        } else {
-          vls = [value];
+    }
+    switch(key){
+      case '-f':
+      case '--file':
+        if (value) {
+          options.file = getStringValue(value, true);
         }
-        const dt = [];
-        if (vls.length === 2 && vls[0] >= 0 &&
-          vls[1] >= 0 && vls[0] <= vls[1] && !isNaN(vls[0]) && !isNaN(vls[1])) {
-          for (var z = vls[0]; z <= vls[1]; z++) {
-            dt.push(z);
+        break;
+      case '-r':
+      case '--read':
+        if (value) {
+          options.read = getStringValue(read, true);
+        }
+        break;
+      case '-j':
+      case '--jsondir':
+        if (value) {
+          options.jsondir = getStringValue(value, true);
+        }
+        break;
+      case '-b':
+      case '--bail':
+        if (typeof value === 'number') {
+          options.bail = value;
+        }
+        break;
+      case '-i':
+      case '--insecure':
+        if (typeof value === 'number') {
+          options.insecure = value;
+        }
+        break;
+      case '-z':
+      case '--vars':
+        if (value) {
+          options.vars = getObjectFromFileOrArgument(value);
+        }
+        break;
+      case '-s':
+      case '--steps':
+        if (value) {
+          let vls;
+          if (value.indexOf('-') > 0) {
+            vls = value.split('-').map(vl => parseInt(vl, 10));
+          } else if (value.indexOf(':') > 0) {
+            vls = value.split(':').map(vl => parseInt(vl, 10));
+          } else {
+            vls = [value];
+          }
+          const dt = [];
+          if (vls.length === 2 && vls[0] >= 0 &&
+            vls[1] >= 0 && vls[0] <= vls[1] && !isNaN(vls[0]) && !isNaN(vls[1])) {
+            for (var z = vls[0]; z <= vls[1]; z++) {
+              dt.push(z);
+            }
+          }
+          if (dt.length) {
+            options.steps = dt;
           }
         }
-        if (dt.length) {
-          options.steps = dt;
+        break;
+      case '-o':
+      case '--timeout':
+        if (value){
+          const vt = parseInt(value, 10);
+          if (!isNaN(vt)) {
+            options.timeout = vt;
+          }
         }
-      }
-      break;
-    case '-o':
-    case '--timeout':
-      if (value){
-        const vt = parseInt(value, 10);
-        if (!isNaN(vt)) {
-          options.timeout = vt;
+        break;
+      case '-t':
+      case '--type':
+        if (value){
+          options.type = value;
         }
-      }
-      break;
-    case '-t':
-    case '--type':
-      if (value){
-        options.type = value;
-      }
-      break;
-    case '-d':
-    case '--debug':
-      if (value){
-        options.debug = value;
-      }
-      break;
-    case '-h':
-    case '--help':
-    case '-v':
-    case '--version':
-      parsingDone = true;
-      showHelp = true;
-      break;
-    default :
-      console.log('    --> INVALID ARGUMENT `'+key+'` PROVIDED ...! Try again with valid arguments.');
-      showHelp = true;
-  }
-});
+        break;
+      case '-d':
+      case '--debug':
+        if (value){
+          options.debug = value;
+        }
+        break;
+      case '-h':
+      case '--help':
+      case '-v':
+      case '--version':
+        parsingDone = true;
+        showHelp = true;
+        break;
+      default :
+        console.log('    --> INVALID ARGUMENT `'+key+'` PROVIDED ...! Try again with valid arguments.');
+        showHelp = true;
+    }
+  });
 
-if (showHelp !== false){
-  console.log('\n    '+name+' - '+description+' .\n');
-  console.log('    version - '+version+'\n');
-  process.exit(2);
+  if (showHelp !== false){
+    console.log('\n    '+name+' - '+description+' .\n');
+    console.log('    version - '+version+'\n');
+    process.exit(2);
+  }
 }
 
 /**
@@ -297,7 +299,7 @@ exports.getOptions = function getOptions(options) {
   if (options.insecure === 1) {
     process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
   }
-  if (options.steps && steps.length) {
+  if (options.steps && options.steps.length) {
     OPTS.steps = options.steps;
   }
   if (typeof options.timeout === 'number' && !isNaN(options.timeout)) {
@@ -338,6 +340,5 @@ exports.getOptions = function getOptions(options) {
   return OPTS;
 };
 
-Object.assign(options, exports.getOptions(options));
-
 exports.options = options;
+exports.parseArguments = parseArguments;

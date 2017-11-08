@@ -58,11 +58,12 @@ exports.forTS = function forTS(fileData) {
       if (!OPTS.replace(test.disabled, vars, methods) && (!OPTS.steps || OPTS.steps.indexOf(ind) !== -1)) {
         let looping = OPTS.replace(test.looping, vars, methods);
         if (looping === undefined || looping === null || looping) {
-          function execTest(that, shouldClone, inde, done) {
+          function execTest(that, shouldClone, inde, looping, done) {
             let sleep = OPTS.replace(test.sleep, vars, methods);
             let tto = OPTS.replace(test.timeout, vars, methods);
             function execNow() {
               vars.$ = inde;
+              vars.LOOPING_ARRAY = looping;
               let condition = OPTS.replace(test.condition, vars, methods);
               if (condition !== undefined) {
                 if (!condition || (typeof condition === 'string' && !eval(condition))) {
@@ -81,7 +82,7 @@ exports.forTS = function forTS(fileData) {
               tto = false;
             }
             if (sleep) {
-              if (tto) that.timeout(sleep + tto);
+              if (tto || OPTS.timeout) that.timeout(sleep + (tto || OPTS.timeout));
               setTimeout(execNow, sleep);
             } else {
               if (tto) that.timeout(tto);
@@ -90,7 +91,7 @@ exports.forTS = function forTS(fileData) {
           }
           if (maxInd) {
             let nowInd = vars.$;
-            it(getSummary(), function(done) { execTest(this, true, nowInd, done); });
+            it(getSummary(), function(done) { execTest(this, true, nowInd, vars.LOOPING_ARRAY, done); });
             return runATest(ind+1, maxInd);
           } else {
             if (typeof looping === 'object' && looping !== null) {
@@ -109,7 +110,7 @@ exports.forTS = function forTS(fileData) {
             looping.forEach((lp, lin) => {
               vars.$ = lin;
               let shouldClone = batch > 1;
-              it(getSummary(), function(done){ execTest(this, shouldClone, lin, done); });
+              it(getSummary(), function(done){ execTest(this, shouldClone, lin, looping, done); });
               if (batch > 1) {
                 runATest(ind + 1, ind + batch);
               }

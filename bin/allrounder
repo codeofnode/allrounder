@@ -4,7 +4,9 @@ const Mocha = require('mocha');
 const path = require('path');
 const os = require('os');
 const { mkdirSync, writeFileSync, readdirSync } = require('fs');
-const { options } = require('../extractArgs');
+const { options, getOptions, parseArguments } = require('../extractArgs');
+parseArguments();
+Object.assign(options, getOptions(options));
 
 const mochaOptions = options.mochaOptions || {};
 if (options.bail) {

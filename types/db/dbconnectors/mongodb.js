@@ -16,7 +16,7 @@ const { MongoClient, ObjectId } = require('mongodb');
     "collection" : "<Collection Name>",
     "command" : "<function to call, eg findOne, find, remove, update etc>",
     "args" : "<Array or object as parameters object passed into db query, eg [{ "$where" : "blah blah" },{ $set : { setIt : true } }]>",
-    "cursorMethods" : "<Array or object, each can have two properties. 1. method : 'string,<of which cursor have a method>' 2.params: the object/Array/Mixed/absent <that will be passed as parameter to above call> eg { method : 'limit', params : 1 }>"
+    "cursorMethods" : "Object map of method to arguments, use null if no arguments to be passed eg {"skip": 1 }>"
   }
 }
 */
@@ -56,22 +56,21 @@ module.exports = function mongodb(vars, next) {
       if(cur instanceof Promise){
         cur.then(callback.bind(null,null)).catch(callback.bind(null));
       } else if(typeof cur.toArray === 'function'){
-        if (!Array.isArray(query.cursorMethods)) {
-          query.cursorMethods = [];
-        }
-        const cln = query.cursorMethods.length;
-        for(let mak, prms, z = 0; z< cln; z++){
-          mak = query.cursorMethods[z];
-          if(typeof mak === 'string' && typeof cur[mak.method] === 'function') {
-            prms = mak.params;
-            if(prms !== undefined){
-              if(!(Array.isArray(prms))){
-                prms = [prms];
+        if (typeof query.cursorMethods === 'object' && query.cursorMethods !== null) {
+          const kys = Object.keys(query.cursorMethods);
+          const kln = kys.length;
+          for(let prms, z = 0; z < kln; z++){
+            if (typeof cur[kys[z]] === 'function') {
+              prms = query.cursorMethods[kys[z]];
+              if(prms !== null){
+                if(!(Array.isArray(prms))){
+                  prms = [prms];
+                }
+              } else {
+                prms = [];
               }
-            } else {
-              prms = [];
+              cur = cur[kys[z]].apply(cur, prms);
             }
-            cur = cur[mak.method].apply(cur, prms);
           }
         }
         if(cur && typeof cur.toArray === 'function'){
