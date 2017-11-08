@@ -123,15 +123,15 @@ function parseArguments() {
     const ind = arg.indexOf('=');
     const larg = arg.toLowerCase();
     const value = getStringValue(arg.substr(ind+1));
-    const key = larg.substr(0, ind) || larg;
+    let key = larg.substr(0, ind) || larg;
     if (key === '-e' || key === '--exec') {
       return parseReq(opts.slice(oind));
     }
     if (ind === -1) {
       if (arg.endsWith('.json')) {
-        options.file = getStringValue(arg, true);
-      } else {
-        options.jsondir = getStringValue(arg, true);
+        key = '-f';
+      } else if (!(arg.startsWith('-'))){
+        key = '-j';
       }
     }
     switch(key){

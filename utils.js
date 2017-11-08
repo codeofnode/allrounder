@@ -70,7 +70,7 @@ exports.postTC = function(OPTS, vars, methods, test, done, noti, err, resp) {
     let ln = asar.length;
     for (let z = 0, key; z < ln; z++) {
       key = asar[z];
-      assert.deepEqual(OPTS.replace(test.assertions[key], vars, methods), OPTS.jsonquery(mainResp, OPTS.replace(key, vars, methods)));
+      assert.deepEqual(OPTS.jsonquery(mainResp, OPTS.replace(key, vars, methods)), OPTS.replace(test.assertions[key], vars, methods));
     }
   }
   if (typeof test.extractors === 'object' && test.extractors !== null) {
