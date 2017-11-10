@@ -10,7 +10,7 @@ module.exports = function forTC(OPTS, test, fileData, done, noti) {
   }
   exec(payl, reqObj.options, function(er, sto, ste) {
     if (typeof reqObj.parser === 'function') {
-      try { sto = reqObj.parser(sto); } catch(er) { console.log(er); }
+      try { sto = reqObj.parser(sto); } catch(er) { }
       try { ste = reqObj.parser(ste); } catch(er) { }
     }
     callback(er, {

@@ -25,7 +25,15 @@ exports.forTS = function forTS(fileData) {
   if (OPTS.timeout) {
     this.timeout(OPTS.timeout);
   }
-  const vars = fileData[1].vars;
+  let vars = fileData[1].vars;
+  if (typeof vars !== 'object' || vars === null) {
+    vars = {};
+  }
+  if (typeof OPTS.vars === 'object' && OPTS.vars !== null) {
+    OPTS.replace(vars, OPTS.vars);
+    vars = Object.assign({}, OPTS.vars, vars);
+  }
+  fileData[1].vars = vars;
   const methods = fileData[2];
   vars.LOOPING_ARRAY = [];
   const mainDebug = getDebug(fileData[1], OPTS, vars);
@@ -72,7 +80,7 @@ exports.forTS = function forTS(fileData) {
               }
               that.shouldClone = shouldClone;
               const currDebug = getDebug(test, OPTS, vars, methods);
-              require(`./types/${test.type || OPTS.type}`)
+              require(`./types/${test.type || fileData[1].type || OPTS.type}`)
                 .call(that, OPTS, test, fileData, done, noti.bind(OPTS, getFinalDebug(currDebug, mainDebug, OPTS.debug)));
             }
             if (typeof sleep !== 'number' || sleep < 1 || isNaN(sleep)) {

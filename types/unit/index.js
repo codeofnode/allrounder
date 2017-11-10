@@ -1,67 +1,70 @@
-const assert = require('assert');
-const { postTC } = require('../../utils');
+const { getReqObj } = require('../../utils');
+const { join, isAbsolute } = require('path');
+const CWD = process.cwd();
 
-const OPTS = {
-  fileArray: []
-};
-
-exports.init = function init(options) {
-  Object.assign(OPTS, init(options));
+const exec = function exec(method, context, payload, construct, isAsync, cb) {
+  let ret;
+  let prevCb;
+  let returnWithCB = false;
+  if (isAsync !== false && isAsync !== 1 && typeof payload[payload.length - 1] === 'function') {
+    returnWithCB = true;
+    prevCb = payload[payload.length - 1];
+    payload[payload.length - 1] = function(err) {
+      if (err) cb(err);
+      else cb(null, Array.prototype.slice.call(arguments, 1))
+      return prevCb.apply(undefined, arguments);
+    };
+  }
+  if (construct) {
+    ret = new (Function.prototype.bind.apply(method, payload));
+  } else {
+    ret = method.apply(context, payload);
+  }
+  if (returnWithCB) return;
+  if (isAsync !== false) {
+    if (ret instanceof Promise) {
+      return ret.then(function(res) {
+        cb(null, res);
+      }).catch(function(rej) {
+        cb(rej);
+      });
+    }
+  }
+  cb(null, ret);
 };
 
 module.exports = function forTC(OPTS, test, fileData, done, noti) {
+  const { reqObj, callback } = getReqObj(this, OPTS, test, fileData, done, noti);
+  noti(1, 'UNIT_TEST', reqObj);
+  if (!reqObj) return done();
   const vars = fileData[1].vars;
   const methods = fileData[2];
-  const callback = function callback(err, resp) {
-    postTC(OPTS, vars, methods, test, done, noti, err, resp);
-  };
   let unit;
-  try { unit = require(OPTS.replace(test.require, vars, methods)); } catch (er) { }
-  const ln = test.assertions.length;
-  const errors = new Array(ln);
-  const outputs = new Array(ln);
-  function forOneAssertion(ind){
-    if (ind === ln) return callback(null, { errors: errors, outputs: outputs });
-    let context;
-    let source;
-    if (ass.context) {
-      context = OPTS.jsonquery(ass.context.global ? global : unit, OPTS.replace(ass.context.path, vars, methods));
+  const requi = reqObj.require || fileData[1].require;
+  if (requi) {
+    const path = OPTS.replace(requi, vars, methods);
+    if (isAbsolute(path)) {
+      unit = require(path);
     } else {
-      context = global;
+      unit = require(join(OPTS.jsondir || CWD, path));
     }
-    if (ass.global) {
-      source = global;
-    } else {
-      source = unit;
+  } else {
+    unit = global;
+  }
+  const method = OPTS.jsonquery(unit, OPTS.replace(reqObj.method, vars, methods));
+  const payload = (reqObj.payload === undefined) ? [] : OPTS.replace(reqObj.paylaod, vars, methods);
+  if (!Array.isArray(payload)) { payload = [payload]; }
+  let context;
+  if (reqObj.context) {
+    context = OPTS.jsonquery(reqObj.context.global ? global : unit, OPTS.replace(reqObj.context.path || reqObj.context, vars, methods));
+  } else {
+    context = global;
+  }
+  exec(method, context, payload, reqObj.construct, reqObj.async === undefined ? fileData[1].async : reqObj.async, function(error, output) {
+    if (typeof reqObj.parser === 'function') {
+      try { error = reqObj.parser(error); } catch(er) { }
+      try { output = reqObj.parser(output); } catch(er) { }
     }
-    if (ass.method) {
-      const method = OPTS.jsonquery(source, OPTS.replace(ass.method, vars, methods));
-      if (typeof method !== 'function') {
-        throw new Error(`${ass.method}: Not a function`);
-      }
-      let params = [];
-      if (ass.params !== undefined) {
-        params = OPTS.replace(Array.isArray(ass.params) ? ass.params : [ass.params], vars, methods);
-      }
-      const output = method.apply(context, params);
-      const asar = Object.keys(ass.checks);
-      const ln = asar.length;
-      if (ass.async && output instanceof Promise) {
-        output.then(function(res) {
-          outputs[ind] = res;
-          forOneAssertion(ind + 1);
-        }).catch(function(rej) {
-          errors[ind] = rej;
-          forOneAssertion(ind + 1);
-        });
-      } else {
-        outputs[ind] = output;
-        forOneAssertion(ind + 1);
-      }
-    } else {
-      outputs[ind] = output;
-      forOneAssertion(ind + 1);
-    }
-  };
-  forOneAssertion(0);
+    callback({ error : error, output: output });
+  });
 };

@@ -1,4 +1,4 @@
-const { join, basename } = require('path');
+const { join, isAbsolute, basename } = require('path');
 const { methods } = require('json2server');
 const EventEmitter = require('events');
 const { request } = methods;
@@ -14,14 +14,17 @@ let showHelp;
 let parsingDone = false;
 
 function getObjectFromFileOrArgument (inp) {
-  if (inp === 'string') {
+  if (typeof inp === 'string') {
     if (inp.endsWith('.json')) {
       try {
         return require(getStringValue(inp, true));
       } catch (er) {
       }
     }
-    return JSON.parse(inp);
+    try {
+      return JSON.parse(inp);
+    } catch (er) {
+    }
   }
   return inp;
 };
@@ -31,7 +34,7 @@ const getStringValue = function(inp, isPath){
     inp = JSON.parse(inp);
   } catch (er) {
     if (isPath) {
-      if (inp.charAt(0) === '/') {
+      if (isAbsolute(inp)) {
         return inp;
       } else if (inp.indexOf('http') === 0) {
         return new Promise((res, rej) => {
@@ -102,13 +105,8 @@ function parseReq(splits) {
         options.debug = 'url,payload,parsed';
       }
   }
-  let vrs = {};
-  if (typeof options.vars === 'object' && options.vars !== null) {
-    vrs = options.vars;
-  }
   options.file = new Promise((res, rej) => {
     res({
-      vars: vrs,
       tests: [{ request: request }]
     });
   });
