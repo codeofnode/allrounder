@@ -16,7 +16,12 @@ const exec = function exec(method, context, payload, construct, isAsync, cb) {
     };
   }
   if (construct) {
-    ret = new (Function.prototype.bind.apply(method, payload));
+    if (payload.length) {
+      payload.unshift(null);
+      ret = new (Function.prototype.bind.apply(method, payload));
+    } else {
+      ret = new (Function.prototype.bind.apply(method));
+    }
   } else {
     ret = method.apply(context, payload);
   }
@@ -35,30 +40,47 @@ const exec = function exec(method, context, payload, construct, isAsync, cb) {
 
 module.exports = function forTC(OPTS, test, fileData, done, noti) {
   const { reqObj, callback } = getReqObj(this, OPTS, test, fileData, done, noti);
-  noti(1, 'UNIT_TEST', reqObj);
   if (!reqObj) return done();
+  if (reqObj.params && reqObj.payload === undefined) {
+    reqObj.payload = reqObj.params;
+    delete reqObj.params;
+  }
+  noti(1, 'UNIT_TEST', reqObj);
   const vars = fileData[1].vars;
   const methods = fileData[2];
   let unit;
-  const requi = reqObj.require || fileData[1].require;
+  const requi = test.require || fileData[1].require;
   if (requi) {
     const path = OPTS.replace(requi, vars, methods);
-    if (isAbsolute(path)) {
-      unit = require(path);
+    if (typeof path === 'string') {
+      if (isAbsolute(path)) {
+        unit = require(path);
+      } else {
+        try {
+          unit = require(join(OPTS.jsondir || CWD, path));
+        } catch (er) {
+          unit = path;
+        }
+      }
     } else {
-      unit = require(join(OPTS.jsondir || CWD, path));
+      unit = path;
     }
   } else {
     unit = global;
   }
   const method = OPTS.jsonquery(unit, OPTS.replace(reqObj.method, vars, methods));
-  const payload = (reqObj.payload === undefined) ? [] : OPTS.replace(reqObj.paylaod, vars, methods);
+  let payload = (reqObj.payload === undefined) ? [] : OPTS.replace(reqObj.payload, vars, methods);
   if (!Array.isArray(payload)) { payload = [payload]; }
   let context;
   if (reqObj.context) {
-    context = OPTS.jsonquery(reqObj.context.global ? global : unit, OPTS.replace(reqObj.context.path || reqObj.context, vars, methods));
+    if (typeof reqObj.context === 'object' && reqObj.context !== null
+        && reqObj.context.source && reqObj.context.path) {
+      context = OPTS.jsonquery(OPTS.replace(reqObj.context.source, vars, methods), OPTS.replace(reqObj.context.path, vars, methods));
+    } else {
+      context = OPTS.replace(reqObj.context, vars, methods);
+    }
   } else {
-    context = global;
+    context = unit;
   }
   exec(method, context, payload, reqObj.construct, reqObj.async === undefined ? fileData[1].async : reqObj.async, function(error, output) {
     if (typeof reqObj.parser === 'function') {
