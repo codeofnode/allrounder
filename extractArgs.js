@@ -29,6 +29,14 @@ function getObjectFromFileOrArgument (inp) {
   return inp;
 };
 
+function resolvePipe(value, options) {
+  const val = getStringValue(value, true);
+  if (isAbsolute(val)) {
+    options.pipePath = val;
+  }
+  options.pipeVars = getObjectFromFileOrArgument(val);
+}
+
 const getStringValue = function(inp, isPath){
   try {
     inp = JSON.parse(inp);
@@ -169,6 +177,12 @@ function parseArguments() {
           options.vars = getObjectFromFileOrArgument(value);
         }
         break;
+      case '-p':
+      case '--pipe':
+        if (value) {
+          resolvePipe(value, options);
+        }
+        break;
       case '-s':
       case '--steps':
         if (value) {
@@ -244,6 +258,7 @@ function parseArguments() {
  * @param {String} options.type what kind of validation is it
  * @param {Number} options.bail whether to bail on first failure
  * @param {String} options.debug whether to console all the requests
+ * @param {String} options.pipe pipe the vars from one execution to another
  * @param {Function} options.logger logger to log the requests and all
  * @param {Function} options.request function to make the http(s) requests
  * @param {Function} options.jsonquery function to make the http(s) requests
@@ -314,11 +329,25 @@ exports.getOptions = function getOptions(options) {
     OPTS.debug = '';
   }
 
+  let vars = {};
   if (typeof options.vars === 'object' && options.vars !== null) {
-    OPTS.vars = options.vars;
+    vars = options.vars;
   } else {
     delete OPTS.vars;
   }
+  if (typeof options.pipe === 'string' && options.pipe.length) {
+    resolvePipe(options.pipe, OPTS);
+    Object.assign(vars, OPTS.pipeVars);
+  } else {
+    if (typeof options.pipePath === 'string' && options.pipePath.length) {
+      OPTS.pipePath = getStringValue(options.pipePath, true);
+    }
+    if (typeof options.pipeVars === 'object' && options.pipeVars !== null) {
+      Object.assign(vars, OPTS.pipeVars);
+    }
+  }
+  delete OPTS.pipeVars;
+  OPTS.vars = vars;
 
   OPTS.logger = ((typeof options.logger === 'function') ? options : utils).logger;
   OPTS.request = ((typeof options.request === 'function') ? options : utils).request;

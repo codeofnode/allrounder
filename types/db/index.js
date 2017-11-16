@@ -1,4 +1,4 @@
-const { getReqObj } = require('../../utils');
+const { getReqObj } = require('../../commonMethods');
 
 module.exports = function forTC(OPTS, test, fileData, done, noti) {
   const { reqObj, callback } = getReqObj(this, OPTS, test, fileData, done, noti);

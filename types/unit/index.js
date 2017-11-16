@@ -1,4 +1,4 @@
-const { getReqObj } = require('../../utils');
+const { getReqObj } = require('../../commonMethods');
 const { join, isAbsolute } = require('path');
 const CWD = process.cwd();
 

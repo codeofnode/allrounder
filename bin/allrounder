@@ -20,13 +20,13 @@ const resolveFile = function resolveFile(cb){
     options.file.then(function(resp){
       const tmpdir = os.tmpdir();
       try {
-        mkdirSync(`${tmpdir}/allroundtests`);
+        mkdirSync(`${tmpdir}/allroundertests`);
       } catch (er) {
         if (er.code !== 'EEXIST') {
           throw er;
         }
       }
-      options.file = `${tmpdir}/allroundtests/test.json`;
+      options.file = `${tmpdir}/allroundertests/test.json`;
       writeFileSync(options.file, JSON.stringify(resp, undefined, 2));
       cb();
     }).catch(function(er){
@@ -39,5 +39,11 @@ const resolveFile = function resolveFile(cb){
 };
 
 resolveFile(function(){
-  mocha.run(process.exit.bind(process));
+  mocha.run(function(ex){
+    if ((typeof options.pipePath === 'string' && options.pipePath.length)
+        && (typeof options.vars === 'object' && options.vars !== null)) {
+      writeFileSync(options.pipePath, JSON.stringify(options.vars, undefined, 2));
+    }
+    process.exit(ex);
+  });
 });
