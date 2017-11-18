@@ -135,6 +135,11 @@ exports.forTS = function forTS(fileData) {
 };
 
 exports.start = function start(){
+  if (typeof OPTS.debug === 'string' && OPTS.debug.indexOf('unhandledRejection') !== -1) {
+    process.on('unhandledRejection', (reason) => {
+        console.error('Unhandled Rejection. Reason:', reason);
+    });
+  }
   OPTS.fileArray.forEach((fileData) => {
     const flnm = fileData[0].split('.').shift();
     if (!fileData[1].disabled && (!OPTS.file || OPTS.file === flnm)) {

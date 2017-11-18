@@ -48,6 +48,11 @@ allrounder -e [method] https://myrestcallurl?withquery=parametersifany [<escaped
 #### Granular level debugging
 > You can provide jsonpath syntax to debug very specifically what you want to debug
 
+#### You can pipe the sesion from one execution to another
+> Yes, can pipe the sessions. So that you can pass the session variables to another execution.
+```
+allrounder -p=pipeFile.json myfile.json
+```
 
 #### Support of javascript APIs
 > You can customize the request, jsonquery, logging etc as per your requirement with javascript APIs

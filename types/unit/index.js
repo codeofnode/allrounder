@@ -26,14 +26,12 @@ const exec = function exec(method, context, payload, construct, isAsync, cb) {
     ret = method.apply(context, payload);
   }
   if (returnWithCB) return;
-  if (isAsync !== false) {
-    if (ret instanceof Promise) {
-      return ret.then(function(res) {
-        cb(null, res);
-      }).catch(function(rej) {
-        cb(rej);
-      });
-    }
+  if ((isAsync !== false) && (ret instanceof Promise)) {
+    return ret.then(function(res) {
+      cb(null, res);
+    }).catch(function(rej) {
+      cb(rej);
+    });
   }
   cb(null, ret);
 };
