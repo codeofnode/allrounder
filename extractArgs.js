@@ -1,4 +1,4 @@
-const { join, isAbsolute, basename } = require('path');
+const { join, isAbsolute, basename, dirname } = require('path');
 const { methods } = require('json2server');
 const EventEmitter = require('events');
 const { request } = methods;
@@ -187,12 +187,14 @@ function parseArguments() {
       case '--steps':
         if (value) {
           let vls;
-          if (value.indexOf('-') > 0) {
-            vls = value.split('-').map(vl => parseInt(vl, 10));
-          } else if (value.indexOf(':') > 0) {
-            vls = value.split(':').map(vl => parseInt(vl, 10));
-          } else {
-            vls = [value];
+          if (typeof value === 'string') {
+            if (value.indexOf('-') > 0) {
+              vls = value.split('-').map(vl => parseInt(vl, 10));
+            } else if (value.indexOf(':') > 0) {
+              vls = value.split(':').map(vl => parseInt(vl, 10));
+            }
+          } else if(typeof value === 'number') {
+            vls = [value, value];
           }
           const dt = [];
           if (vls.length === 2 && vls[0] >= 0 &&
@@ -283,26 +285,104 @@ exports.getOptions = function getOptions(options) {
     }
   }
 
+  const filesMap = {};
+
+  function getArp(jsondir, fn) {
+    const bname = basename(fn);
+    if (filesMap[bname]) return filesMap[bname];
+    const ar = [bname];
+    try {
+      ar.push(require(`${jsondir}/${fn}`));
+    } catch(er) {
+      ar.push({ tests : [] });
+    }
+    try {
+      let base = fn.split('.');
+      base.pop();
+      base = bas.join('.');
+      ar.push(require(`${jsondir}/${base}`));
+    } catch(er) {
+      ar.push({});
+    }
+    if (typeof ar[2].EVAL !== 'function') ar[2].EVAL = eval;
+    filesMap[bname] = ar;
+    return ar;
+  }
+
   if (typeof options.file === 'string' && options.file.length) {
     OPTS.fileArray = [[basename(options.file), require(options.file), { EVAL: eval }]];
   } else if (typeof options.jsondir === 'string' && options.jsondir.length) {
     OPTS.fileArray = readdirSync(options.jsondir)
       .filter(fn => fn.endsWith('.json'))
-      .map((fn) => {
-        const ar = [fn, require(`${options.jsondir}/${fn}`)];
-        try {
-          let base = fn.split('.');
-          base.pop();
-          base = bas.join('.');
-          ar.push(require(`${options.jsondir}/${base}`));
-        } catch(er) {
-          ar.push({});
-        }
-        if (typeof ar[2].EVAL !== 'function') ar[2].EVAL = eval;
-        return ar;
-      });
+      .map(getArp.bind(null, options.jsondir));
   } else if (!(options.file instanceof Promise)) {
     throw new Error('`jsondir` must be present in the options.');
+  }
+
+  if ((typeof options.jsondir !== 'string' || !options.jsondir.length)
+    && (typeof options.file === 'string' && options.file.length)) {
+    options.jsondir = dirname(options.file);
+  }
+
+  if (typeof options.jsondir === 'string' && options.jsondir.length) {
+    OPTS.fileArray.forEach((fa) => {
+      const fl = fa[1];
+      if (Array.isArray(fl.tests)) {
+        let ln = fl.tests.length;
+        for (let z = 0; z < ln; z++) {
+          const steps = fl.tests[z].steps;
+          if (typeof fl.tests[z].import === 'string' && !fl.tests[z].disabled) {
+            if (!fl.tests[z].import.endsWith('.json')) {
+              fl.tests[z].import += '.json';
+            }
+            let arp = getArp(options.jsondir, fl.tests[z].import);
+            let ar = arp[1];
+            if (fl.tests[z].fetchVars !== false) {
+              if (typeof ar.vars === 'object' && ar.vars !== null) {
+                fl.vars = Object.assign({}, ar.vars, fl.vars);
+              }
+              if (typeof arp[2] === 'object' && arp[2] !== null) {
+                fa[2] = Object.assign({}, arp[2], fa[2]);
+              }
+            }
+            if (fl.tests[z].fetchVars === true) {
+              fl.tests[z].disabled = true;
+              continue;
+            }
+            if (!Array.isArray(ar)) {
+              ar = ar.tests;
+            }
+            if (Array.isArray(ar)) {
+              ar = JSON.parse(JSON.stringify(ar));
+              if (steps) {
+                const art = [];
+                if (Array.isArray(steps)) {
+                  steps.forEach(st => {
+                    if (typeof st === 'number' && ar[st]) {
+                      art.push(ar[st]);
+                    }
+                  });
+                } else if (typeof steps === 'object' && steps !== null
+                    && typeof steps.from === 'number' && typeof steps.to === 'number'
+                    && steps.to >= steps.from) {
+                  for (let j = steps.from; j <= steps.to; j++) {
+                    if (ar[j]) {
+                      art.push(ar[j]);
+                    }
+                  }
+                } else if (typeof steps === 'number' && ar[steps]) {
+                  art.push(ar[steps]);
+                }
+                ar = art;
+              }
+              fl.tests.splice.bind(fl.tests, z, 1).apply(fl.tests, ar);
+              ln += ar.length - 1;
+              z--;
+            }
+          }
+        }
+      }
+    });
   }
 
   if (options.bail !== 0) {

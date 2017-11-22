@@ -89,7 +89,7 @@ exports.forTS = function forTS(fileData) {
               tto = false;
             }
             if (sleep) {
-              if (tto || OPTS.timeout) that.timeout(sleep + (tto || OPTS.timeout));
+              that.timeout(sleep + (tto || OPTS.timeout || 2000));
               setTimeout(execNow, sleep);
             } else {
               if (tto) that.timeout(tto);

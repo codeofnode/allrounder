@@ -37,12 +37,16 @@ exports.cropString = function cropString(str, ln = 100) {
 };
 
 exports.jsonquery = function jsonquery(data, path) {
+  let res = data;
   if (typeof data === 'object' && data !== null) {
-    const res = jsonpath.query(data, path);
-    return (Array.isArray(res) && res.length < 2) ? res[0] : res;
-  } else {
-    return data;
+    if (path.indexOf('ARRAY<') === 0) {
+      res = jsonpath.query(data, path.substring(6));
+    } else {
+      res = jsonpath.query(data, path);
+      res = (Array.isArray(res) && res.length < 2) ? res[0] : res;
+    }
   }
+  return res;
 };
 
 exports.request = request;

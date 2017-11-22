@@ -6,6 +6,15 @@
 #### Act as simple REST Client
 > Just defined the request, with all entries eg url, method, body, headers then after execution, debug the response.
 
+#### You can pipe the sesion from one execution to another
+> Yes, can pipe the sessions. So that you can pass the session variables to another execution.
+```
+allrounder -p=pipeFile.json myfile.json
+```
+
+#### Re-usable components
+> You can re-use a component (set of test cases) in a number of test suites. So you don't have to write same test case everywhere. Plus when its to modify, its a single place change.
+
 #### Can use variables also for objects and at any depth
 > It uses [templist](https://github.com/codeofnode/templist) engine to resolve the variables at run time.
 
@@ -48,11 +57,6 @@ allrounder -e [method] https://myrestcallurl?withquery=parametersifany [<escaped
 #### Granular level debugging
 > You can provide jsonpath syntax to debug very specifically what you want to debug
 
-#### You can pipe the sesion from one execution to another
-> Yes, can pipe the sessions. So that you can pass the session variables to another execution.
-```
-allrounder -p=pipeFile.json myfile.json
-```
 
 #### Support of javascript APIs
 > You can customize the request, jsonquery, logging etc as per your requirement with javascript APIs

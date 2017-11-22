@@ -4,9 +4,12 @@ const { options } = require('./extractArgs');
 exports.getReqObj = function(that, OPTS, test, fileData, done, noti) {
   const vars = fileData[1].vars;
   const methods = fileData[2];
+  if (typeof test.vars === 'object' && test.vars !== null) {
+    Object.assign(vars, OPTS.replace(test.vars, vars, methods));
+  }
   const input = that.shouldClone ? JSON.parse(JSON.stringify(test.request)) : test.request;
   return {
-    reqObj: OPTS.replace(input, vars, methods),
+    reqObj: OPTS.replace(input, vars, methods) || {},
     callback: function callback(err, resp) {
       exports.postTC(OPTS, vars, methods, test, done, noti, err, resp);
     }
@@ -35,9 +38,6 @@ exports.postTC = function(OPTS, vars, methods, test, done, noti, err, resp) {
       key = asar[z];
       vars[OPTS.replace(key, vars, methods)] = OPTS.jsonquery(mainResp, OPTS.replace(test.extractors[key], vars, methods));
     }
-  }
-  if (typeof test.vars === 'object' && test.vars !== null) {
-    Object.assign(vars, OPTS.replace(test.vars, vars, methods));
   }
   if (typeof test.asserts === 'object' && test.asserts !== null) {
     let asar = Object.keys(test.asserts);
