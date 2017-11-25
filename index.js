@@ -21,6 +21,30 @@ function getFinalDebug(tc, ts, main) {
   return '';
 }
 
+function ifConditionFailed(condition){
+  if (condition !== undefined) {
+    try {
+      if (!condition || (typeof condition === 'string' && !eval(condition))) {
+        return true;
+      }
+    } catch (er) {
+      return true;
+    }
+  }
+}
+
+function resolveWhile(inputwhile, OPTS){
+  if (typeof inputwhile === 'string') {
+    return {
+      while : inputwhile,
+      interval: OPTS.whileinterval
+    };
+  } else if (typeof inputwhile === 'object' && inputwhile !== null
+    && typeof inputwhile.while === 'string' && typeof inputwhile.interval === 'number') {
+    return inputwhile;
+  }
+}
+
 exports.forTS = function forTS(fileData) {
   if (OPTS.timeout) {
     this.timeout(OPTS.timeout);
@@ -66,21 +90,38 @@ exports.forTS = function forTS(fileData) {
         let looping = OPTS.replace(test.looping, vars, methods);
         if (looping === undefined || looping === null || looping) {
           function execTest(that, shouldClone, inde, looping, done) {
+            vars.$ = inde;
             let sleep = OPTS.replace(test.sleep, vars, methods);
             let tto = OPTS.replace(test.timeout, vars, methods);
             function execNow() {
               vars.$ = inde;
               vars.LOOPING_ARRAY = looping;
-              let condition = OPTS.replace(test.condition, vars, methods);
-              if (condition !== undefined) {
-                if (!condition || (typeof condition === 'string' && !eval(condition))) {
-                  return done();
-                }
+              if (ifConditionFailed(OPTS.replace(test.condition, vars, methods))) {
+                return done();
               }
               that.shouldClone = shouldClone;
-              const currDebug = getDebug(test, OPTS, vars, methods);
-              require(`./types/${test.type || fileData[1].type || OPTS.type}`)
-                .call(that, OPTS, test, fileData, done, noti.bind(OPTS, getFinalDebug(currDebug, mainDebug, OPTS.debug)));
+              function executing(whileIndex, cb) {
+                vars.WHILE_INDEX = whileIndex;
+                const currDebug = getDebug(test, OPTS, vars, methods);
+                require(`./types/${test.type || fileData[1].type || OPTS.type}`)
+                  .call(that, OPTS, test, fileData, cb, noti.bind(OPTS, getFinalDebug(currDebug, mainDebug, OPTS.debug)));
+              }
+              const resolvedwhile = resolveWhile(test.while, OPTS);
+              if (resolvedwhile) {
+                that.shouldClone = true;
+                function loopingFunction(curIndex){
+                  setTimeout(() => {
+                    if (ifConditionFailed(OPTS.replace(resolvedwhile.while, vars, methods))) {
+                      done();
+                    } else {
+                      executing(curIndex, loopingFunction.bind(null, curIndex + 1))
+                    }
+                  }, resolvedwhile.interval);
+                }
+                loopingFunction(0);
+              } else {
+                executing(0, done);
+              }
             }
             if (typeof sleep !== 'number' || sleep < 1 || isNaN(sleep)) {
               sleep = false;
@@ -116,7 +157,7 @@ exports.forTS = function forTS(fileData) {
             vars.LOOPING_ARRAY = looping;
             looping.forEach((lp, lin) => {
               vars.$ = lin;
-              let shouldClone = batch > 1;
+              let shouldClone = batch > 1 || looping.length > 1;
               it(getSummary(), function(done){ execTest(this, shouldClone, lin, looping, done); });
               if (batch > 1) {
                 runATest(ind + 1, ind + batch);

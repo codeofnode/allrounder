@@ -217,6 +217,14 @@ function parseArguments() {
           }
         }
         break;
+      case '--whileinterval':
+        if (value){
+          const vt = parseInt(value, 10);
+          if (!isNaN(vt)) {
+            options.whileinterval = vt;
+          }
+        }
+        break;
       case '-t':
       case '--type':
         if (value){
@@ -397,6 +405,11 @@ exports.getOptions = function getOptions(options) {
   }
   if (typeof options.timeout === 'number' && !isNaN(options.timeout)) {
     OPTS.timeout = options.timeout;
+  }
+  if (typeof options.whileinterval === 'number' && !isNaN(options.whileinterval)) {
+    OPTS.whileinterval = options.whileinterval;
+  } else {
+    OPTS.whileinterval = 1000;
   }
   if (typeof options.type === 'string' && options.type.length) {
     OPTS.type = options.type;
