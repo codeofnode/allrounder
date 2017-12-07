@@ -288,7 +288,7 @@ function getArp(jsondir, fn) {
 }
 
 function getTests(fl) {
-  return fl.tests || fl.steps || sl.entries || fl.records;
+  return fl.tests || fl.steps || fl.entries || fl.records;
 }
 
 function resolveJson (fa) {

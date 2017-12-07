@@ -183,7 +183,7 @@ exports.start = function start(){
   OPTS.fileArray.forEach((fileData) => {
     const flnm = fileData[0].split('.').shift();
     if (!fileData[1].disabled && (!OPTS.file || OPTS.file === flnm)) {
-      describe(fileData[1].scenario || fileData[1].testsuite || flnm, function(){
+      describe(fileData[1].testsuite || fileData[1].scenario || flnm, function(){
         exports.forTS.call(this, fileData);
       });
     }
