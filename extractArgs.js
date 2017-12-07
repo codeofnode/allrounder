@@ -177,6 +177,12 @@ function parseArguments() {
           options.vars = getObjectFromFileOrArgument(value);
         }
         break;
+      case '-m':
+      case '--mocha':
+        if (value) {
+          options.mocha = getObjectFromFileOrArgument(value);
+        }
+        break;
       case '-p':
       case '--pipe':
         if (value) {
@@ -199,7 +205,7 @@ function parseArguments() {
           const dt = [];
           if (vls.length === 2 && vls[0] >= 0 &&
             vls[1] >= 0 && vls[0] <= vls[1] && !isNaN(vls[0]) && !isNaN(vls[1])) {
-            for (var z = vls[0]; z <= vls[1]; z++) {
+            for (let z = vls[0]; z <= vls[1]; z++) {
               dt.push(z);
             }
           }
@@ -257,6 +263,95 @@ function parseArguments() {
   }
 }
 
+const filesMap = {};
+
+function getArp(jsondir, fn) {
+  const bname = basename(fn);
+  if (filesMap[bname]) return filesMap[bname];
+  const ar = [bname];
+  try {
+    ar.push(require(`${jsondir}/${fn}`));
+  } catch(er) {
+    ar.push({ tests : [] });
+  }
+  try {
+    let base = fn.split('.');
+    base.pop();
+    base = bas.join('.');
+    ar.push(require(`${jsondir}/${base}`));
+  } catch(er) {
+    ar.push({});
+  }
+  if (typeof ar[2].EVAL !== 'function') ar[2].EVAL = eval;
+  filesMap[bname] = ar;
+  return ar;
+}
+
+function getTests(fl) {
+  return fl.tests || fl.steps || sl.entries || fl.records;
+}
+
+function resolveJson (fa) {
+  const fl = fa[1];
+  const tests = getTests(fl);
+  if (Array.isArray(tests)) {
+    let ln = tests.length;
+    for (let z = 0; z < ln; z++) {
+      const steps = tests[z].steps;
+      if (typeof tests[z].import === 'string' && !tests[z].disabled) {
+        if (!tests[z].import.endsWith('.json')) {
+          tests[z].import += '.json';
+        }
+        let arp = getArp(options.jsondir, tests[z].import);
+        let ar = arp[1];
+        if (tests[z].fetchVars !== false) {
+          if (typeof ar.vars === 'object' && ar.vars !== null) {
+            fl.vars = Object.assign({}, ar.vars, fl.vars);
+          }
+          if (typeof arp[2] === 'object' && arp[2] !== null) {
+            fa[2] = Object.assign({}, arp[2], fa[2]);
+          }
+        }
+        if (tests[z].fetchVars === true) {
+          tests[z].disabled = true;
+          continue;
+        }
+        if (!Array.isArray(ar)) {
+          ar = getTests(ar);
+        }
+        if (Array.isArray(ar)) {
+          ar = JSON.parse(JSON.stringify(ar));
+          if (steps) {
+            const art = [];
+            if (Array.isArray(steps)) {
+              steps.forEach(st => {
+                if (typeof st === 'number' && ar[st]) {
+                  art.push(ar[st]);
+                }
+              });
+            } else if (typeof steps === 'object' && steps !== null
+                && typeof steps.from === 'number' && typeof steps.to === 'number'
+                && steps.to >= steps.from) {
+              for (let j = steps.from; j <= steps.to; j++) {
+                if (ar[j]) {
+                  art.push(ar[j]);
+                }
+              }
+            } else if (typeof steps === 'number' && ar[steps]) {
+              art.push(ar[steps]);
+            }
+            ar = art;
+          }
+          tests.splice.bind(tests, z, 1).apply(tests, ar);
+          ln += ar.length - 1;
+          z--;
+        }
+      }
+    }
+    fl.tests = tests;
+  }
+}
+
 /**
  * get options the testall with various options
  * @param {Object} options the options
@@ -272,10 +367,7 @@ function parseArguments() {
  * @param {Function} options.logger logger to log the requests and all
  * @param {Function} options.request function to make the http(s) requests
  * @param {Function} options.jsonquery function to make the http(s) requests
- * @param {Object} options.notifier the hooks notifier
- * @param {Function} options.notifier.emit the various hooks functions
  */
-
 exports.getOptions = function getOptions(options) {
   const OPTS = {};
   if (!options.read){
@@ -291,30 +383,6 @@ exports.getOptions = function getOptions(options) {
     if (!(OPTS.hasOwnProperty(_ky))){
       OPTS[_ky] = read[ky];
     }
-  }
-
-  const filesMap = {};
-
-  function getArp(jsondir, fn) {
-    const bname = basename(fn);
-    if (filesMap[bname]) return filesMap[bname];
-    const ar = [bname];
-    try {
-      ar.push(require(`${jsondir}/${fn}`));
-    } catch(er) {
-      ar.push({ tests : [] });
-    }
-    try {
-      let base = fn.split('.');
-      base.pop();
-      base = bas.join('.');
-      ar.push(require(`${jsondir}/${base}`));
-    } catch(er) {
-      ar.push({});
-    }
-    if (typeof ar[2].EVAL !== 'function') ar[2].EVAL = eval;
-    filesMap[bname] = ar;
-    return ar;
   }
 
   if (typeof options.file === 'string' && options.file.length) {
@@ -333,64 +401,7 @@ exports.getOptions = function getOptions(options) {
   }
 
   if (typeof options.jsondir === 'string' && options.jsondir.length) {
-    OPTS.fileArray.forEach((fa) => {
-      const fl = fa[1];
-      if (Array.isArray(fl.tests)) {
-        let ln = fl.tests.length;
-        for (let z = 0; z < ln; z++) {
-          const steps = fl.tests[z].steps;
-          if (typeof fl.tests[z].import === 'string' && !fl.tests[z].disabled) {
-            if (!fl.tests[z].import.endsWith('.json')) {
-              fl.tests[z].import += '.json';
-            }
-            let arp = getArp(options.jsondir, fl.tests[z].import);
-            let ar = arp[1];
-            if (fl.tests[z].fetchVars !== false) {
-              if (typeof ar.vars === 'object' && ar.vars !== null) {
-                fl.vars = Object.assign({}, ar.vars, fl.vars);
-              }
-              if (typeof arp[2] === 'object' && arp[2] !== null) {
-                fa[2] = Object.assign({}, arp[2], fa[2]);
-              }
-            }
-            if (fl.tests[z].fetchVars === true) {
-              fl.tests[z].disabled = true;
-              continue;
-            }
-            if (!Array.isArray(ar)) {
-              ar = ar.tests;
-            }
-            if (Array.isArray(ar)) {
-              ar = JSON.parse(JSON.stringify(ar));
-              if (steps) {
-                const art = [];
-                if (Array.isArray(steps)) {
-                  steps.forEach(st => {
-                    if (typeof st === 'number' && ar[st]) {
-                      art.push(ar[st]);
-                    }
-                  });
-                } else if (typeof steps === 'object' && steps !== null
-                    && typeof steps.from === 'number' && typeof steps.to === 'number'
-                    && steps.to >= steps.from) {
-                  for (let j = steps.from; j <= steps.to; j++) {
-                    if (ar[j]) {
-                      art.push(ar[j]);
-                    }
-                  }
-                } else if (typeof steps === 'number' && ar[steps]) {
-                  art.push(ar[steps]);
-                }
-                ar = art;
-              }
-              fl.tests.splice.bind(fl.tests, z, 1).apply(fl.tests, ar);
-              ln += ar.length - 1;
-              z--;
-            }
-          }
-        }
-      }
-    });
+    OPTS.fileArray.forEach(resolveJson);
   }
 
   if (options.bail !== 0) {
@@ -425,8 +436,10 @@ exports.getOptions = function getOptions(options) {
   let vars = {};
   if (typeof options.vars === 'object' && options.vars !== null) {
     vars = options.vars;
-  } else {
-    delete OPTS.vars;
+  }
+  let mocha = {};
+  if (typeof options.mocha === 'object' && options.mocha !== null) {
+    mocha = options.mocha;
   }
   if (typeof options.pipe === 'string' && options.pipe.length) {
     resolvePipe(options.pipe, OPTS);
@@ -441,22 +454,15 @@ exports.getOptions = function getOptions(options) {
   }
   delete OPTS.pipeVars;
   OPTS.vars = vars;
+  OPTS.mocha = mocha;
 
   OPTS.logger = ((typeof options.logger === 'function') ? options : utils).logger;
   OPTS.request = ((typeof options.request === 'function') ? options : utils).request;
   OPTS.replace = ((typeof options.replace === 'function') ? options : utils).replace;
   OPTS.jsonquery = ((typeof options.jsonquery === 'function') ? options : utils).jsonquery;
+  OPTS.beforeEach = options.beforeEach;
+  OPTS.afterEach = options.afterEach;
 
-  if (options.notifier instanceof EventEmitter) {
-    OPTS.notifier = options.notifier;
-  } else {
-    OPTS.notifier = {}
-    if (options.notifier && typeof options.notifier.emit === 'function') {
-      OPTS.notifier = options.notifier.emit;
-    } else {
-      OPTS.notifier = utils.noop;
-    }
-  }
   return OPTS;
 };
 

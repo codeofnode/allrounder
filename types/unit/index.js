@@ -43,7 +43,7 @@ module.exports = function forTC(OPTS, test, fileData, done, noti) {
     reqObj.payload = reqObj.params;
     delete reqObj.params;
   }
-  noti(1, 'UNIT_TEST', reqObj);
+  noti('UNIT_TEST', reqObj);
   const vars = fileData[1].vars;
   const methods = fileData[2];
   let unit;

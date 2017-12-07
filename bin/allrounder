@@ -8,7 +8,7 @@ const { options, getOptions, parseArguments } = require('../extractArgs');
 parseArguments();
 Object.assign(options, getOptions(options));
 
-const mochaOptions = options.mochaOptions || {};
+const mochaOptions = options.mocha || {};
 if (options.bail) {
   mochaOptions.bail = options.bail;
 }

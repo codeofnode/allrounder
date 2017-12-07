@@ -67,20 +67,14 @@ exports.forTS = function forTS(fileData) {
       delete vars[ky];
     }
   });
-  const noti = function noti(dl, lv, kind, obj) {
-    OPTS.logger(dl, kind, obj);
-    const pre = lv === 1 ? 'PRE': 'POST';
-    OPTS.notifier(`${pre}_TESTCASE`, obj, vars);
-    OPTS.notifier(`${pre}_TESTCASE:${kind}`, obj, vars);
-  };
-  OPTS.notifier('PRE_TEST_SUITE', fileData, vars, OPTS);
   const ln = fileData[1].tests.length;
   function runATest(ind, maxInd) {
     if (ind < (maxInd || ln) && ind < ln) {
       const test = fileData[1].tests[ind];
-      function getSummary(){
-        return test.summary
-          ? OPTS.replace(test.summary, vars, methods)
+      function getSummary() {
+        const summ = test.summary || test.testcase || test.it || test.name;
+        return summ
+          ? OPTS.replace(summ, vars, methods)
           : test.request
             ? cropString(test.request.url || test.request.payload || 'some unknown test')
             : 'No Summary';
@@ -104,7 +98,7 @@ exports.forTS = function forTS(fileData) {
                 vars.WHILE_INDEX = whileIndex;
                 const currDebug = getDebug(test, OPTS, vars, methods);
                 require(`./types/${test.type || fileData[1].type || OPTS.type}`)
-                  .call(that, OPTS, test, fileData, cb, noti.bind(OPTS, getFinalDebug(currDebug, mainDebug, OPTS.debug)));
+                  .call(that, OPTS, test, fileData, cb, OPTS.logger.bind(OPTS, getFinalDebug(currDebug, mainDebug, OPTS.debug)));
               }
               const resolvedwhile = resolveWhile(test.while, OPTS);
               if (resolvedwhile) {
@@ -172,7 +166,6 @@ exports.forTS = function forTS(fileData) {
   }
   vars.LOOPING_ARRAY = [];
   runATest(0);
-  OPTS.notifier('POST_TEST_SUITE', fileData, vars, OPTS);
 };
 
 exports.start = function start(){
@@ -181,10 +174,16 @@ exports.start = function start(){
         console.error('Unhandled Rejection. Reason:', reason);
     });
   }
+  if (typeof OPTS.beforeEach === 'function') {
+    beforeEach(OPTS.beforeEach);
+  }
+  if (typeof OPTS.afterEach === 'function') {
+    afterEach(OPTS.afterEach);
+  }
   OPTS.fileArray.forEach((fileData) => {
     const flnm = fileData[0].split('.').shift();
     if (!fileData[1].disabled && (!OPTS.file || OPTS.file === flnm)) {
-      describe(flnm, function(){
+      describe(fileData[1].scenario || fileData[1].testsuite || flnm, function(){
         exports.forTS.call(this, fileData);
       });
     }

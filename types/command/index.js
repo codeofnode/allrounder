@@ -3,7 +3,7 @@ const { getReqObj } = require('../../commonMethods');
 
 module.exports = function forTC(OPTS, test, fileData, done, noti) {
   const { reqObj, callback } = getReqObj(this, OPTS, test, fileData, done, noti);
-  noti(1, 'SYS_COMMAND', reqObj);
+  noti('SYS_COMMAND', reqObj);
   let payl = reqObj.payload;
   if (reqObj.prefix) {
     payl = `${reqObj.prefix} '${reqObj.payload.split("'").join("\\'")}'`;
