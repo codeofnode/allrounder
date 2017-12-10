@@ -55,6 +55,7 @@ exports.forTS = function forTS(fileData) {
   }
   if (typeof OPTS.vars === 'object' && OPTS.vars !== null) {
     OPTS.replace(vars, OPTS.vars);
+    Object.assign(vars, OPTS.vars);
   }
   fileData[1].vars = vars;
   const methods = fileData[2];

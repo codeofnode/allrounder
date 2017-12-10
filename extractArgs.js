@@ -192,25 +192,29 @@ function parseArguments() {
       case '-s':
       case '--steps':
         if (value) {
-          let vls;
-          if (typeof value === 'string') {
+          if (typeof value === 'number') {
+            options.steps = [value];
+          } else if (Array.isArray(value)) {
+            options.steps = value.map(vl => parseInt(vl, 10));
+          } else if (typeof value === 'string') {
+            let vls;
             if (value.indexOf('-') > 0) {
               vls = value.split('-').map(vl => parseInt(vl, 10));
             } else if (value.indexOf(':') > 0) {
               vls = value.split(':').map(vl => parseInt(vl, 10));
             }
-          } else if(typeof value === 'number') {
-            vls = [value, value];
-          }
-          const dt = [];
-          if (vls.length === 2 && vls[0] >= 0 &&
-            vls[1] >= 0 && vls[0] <= vls[1] && !isNaN(vls[0]) && !isNaN(vls[1])) {
-            for (let z = vls[0]; z <= vls[1]; z++) {
-              dt.push(z);
+            if (Array.isArray(vls)) {
+              const dt = [];
+              if (vls.length === 2 && vls[0] >= 0 &&
+                vls[1] >= 0 && vls[0] <= vls[1] && !isNaN(vls[0]) && !isNaN(vls[1])) {
+                for (let z = vls[0]; z <= vls[1]; z++) {
+                  dt.push(z);
+                }
+              }
+              if (dt.length) {
+                options.steps = dt;
+              }
             }
-          }
-          if (dt.length) {
-            options.steps = dt;
           }
         }
         break;
@@ -288,7 +292,7 @@ function getArp(jsondir, fn) {
 }
 
 function getTests(fl) {
-  return fl.tests || fl.steps || fl.entries || fl.records;
+  return fl.tests || fl.testcases || fl.steps || fl.entries || fl.records;
 }
 
 function resolveJson (fa) {
@@ -321,7 +325,7 @@ function resolveJson (fa) {
         }
         if (Array.isArray(ar)) {
           ar = JSON.parse(JSON.stringify(ar));
-          if (steps) {
+          if (steps !== undefined) {
             const art = [];
             if (Array.isArray(steps)) {
               steps.forEach(st => {
@@ -449,7 +453,7 @@ exports.getOptions = function getOptions(options) {
       OPTS.pipePath = getStringValue(options.pipePath, true);
     }
     if (typeof options.pipeVars === 'object' && options.pipeVars !== null) {
-      Object.assign(vars, OPTS.pipeVars);
+      Object.assign(vars, options.pipeVars);
     }
   }
   delete OPTS.pipeVars;

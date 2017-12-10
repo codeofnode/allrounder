@@ -1,7 +1,7 @@
 const assert = require('assert');
 const { options } = require('./extractArgs');
 
-function postTC(that, OPTS, vars, methods, test, done, noti, err, resp) {
+function postTC(OPTS, vars, methods, test, done, noti, err, resp) {
   const mainResp = err || resp;
   noti('RESPONSE', mainResp);
   extracting(OPTS, test.extractors, vars, methods, mainResp);
@@ -13,7 +13,6 @@ function postTC(that, OPTS, vars, methods, test, done, noti, err, resp) {
       asserting(OPTS, test.asserts[asar[z]], vars, methods, OPTS.replace(asar[z], vars, methods));
     }
   }
-  extracting(OPTS, test.testExtractors, vars, methods, that);
   options.vars = vars;
   done();
 };
@@ -32,7 +31,7 @@ exports.getReqObj = function(that, OPTS, test, fileData, done, noti) {
   return {
     reqObj: OPTS.replace(input, vars, methods) || {},
     callback: function callback(err, resp) {
-      postTC(that, OPTS, vars, methods, test, done, noti, err, resp);
+      postTC(OPTS, vars, methods, test, done, noti, err, resp);
     }
   };
 };

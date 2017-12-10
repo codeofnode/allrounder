@@ -40,11 +40,15 @@ exports.jsonquery = function jsonquery(data, path) {
   let res = data;
   if (typeof data === 'object' && data !== null) {
     if (path.indexOf('ARRAY<') === 0) {
-      res = jsonpath.query(data, path.substring(6));
-    } else {
-      res = jsonpath.query(data, path);
-      res = (Array.isArray(res) && res.length < 2) ? res[0] : res;
+      return jsonpath.query(data, path.substring(6));
+    } else if (path.indexOf('<') === 5) {
+      const count = parseInt(path.substr(0, 5), 10);
+      if (!isNaN(count)) {
+        return jsonpath.query(data, path.substring(6), count);
+      }
     }
+    res = jsonpath.query(data, path, 1);
+    res = (Array.isArray(res) && res.length < 2) ? res[0] : res;
   }
   return res;
 };
