@@ -36,10 +36,10 @@ allrounder -f=http://myrestserver.com/allrounder-test-file.json
 #### Looping
 > You can loop through a set of array or number for single or batch of test cases
 
-#### Act as curl for windows users and also as simplified curl for others
+#### Act as curl for windows users and also as a "simplified" curl
 > Execute a request right on command line, with the simplest format
 ```
-allrounder -e [method] https://myrestcallurl?withquery=parametersifany [<escaped-JSON-stringified-headers-or-jsonfilepath>] [<escaped-JSON-stringified-paylaod-or-jsonfilepath>]
+allrounder -e [method] https://myrestcallurl?withquery=parametersifany [<JSON-stringified-headers-or-jsonfilepath>] [<JSON-stringified-paylaod-or-jsonfilepath>]
 ```
 
 #### Can do database validation
@@ -57,21 +57,20 @@ allrounder -e [method] https://myrestcallurl?withquery=parametersifany [<escaped
 #### Granular level debugging
 > You can provide jsonpath syntax to debug very specifically what you want to debug
 
-
 #### Support of javascript APIs
-> You can customize the request, jsonquery, logging etc as per your requirement with javascript APIs
+> You can customize the request, jsonquery etc as per your requirement with javascript APIs
 
 #### Pre and Post hooks
-> You can defined pre and post hook function handlers which initializing the options.
+> You can defined pre and post hook function handlers which initializing the options. That comes when you use javascript APIs.
 
 #### Conditon based execution
 > You can setup condition based execution for any test case, with the property `condition` which is evaluated dynamically.
 
 #### Beautifull reporting
-> Uses mocha internally to display the results and diff beautifully on command line.
+> Internally it uses mocha to display the results and diff beautifully on command line.
 
 #### Easy to understand
-> Its easy to understand a json file rather lines of code. So keeping data in jsonfile is always a smart choice.
+> Its easy to understand a json file rather lines of code. So keeping data in jsonfile is always a smart choice. Yes, when it comes to utility functions in rare advance cases, it requires a little learning. But anyways the positive side is the freedome of customization.
 
 #### Langauge independent
 > Don't you think that being programming language independent is good move.
@@ -83,9 +82,12 @@ $ npm install [-g] allrounder
 ```
 
 ## Usage
-> A very general usage is below. There are many more options available.
+> A very general usage is below. There are many more other options available.
 
 ```
 $ allrounder my-json-file.json
 $ allrounder my-json-dir
 ```
+
+## Docs
+> Sorry folks. Haven't got much time as of now. If you want to initiate, please feel free to contact me or raise a PR.

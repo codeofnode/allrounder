@@ -25,7 +25,6 @@ exports.getReqObj = function(that, OPTS, test, fileData, done, noti) {
       const nk = OPTS.replace(ky, vars, methods);
       vars[nk] = OPTS.replace(test.vars[ky], vars, methods);
     });
-    Object.assign(vars, OPTS.replace(test.vars, vars, methods));
   }
   const input = that.shouldClone ? JSON.parse(JSON.stringify(test.request)) : test.request;
   return {

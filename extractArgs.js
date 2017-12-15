@@ -334,12 +334,9 @@ function resolveJson (fa) {
                 }
               });
             } else if (typeof steps === 'object' && steps !== null
-                && typeof steps.from === 'number' && typeof steps.to === 'number'
-                && steps.to >= steps.from) {
-              for (let j = steps.from; j <= steps.to; j++) {
-                if (ar[j]) {
-                  art.push(ar[j]);
-                }
+                && (typeof steps.from === 'number' || typeof steps.to === 'number')) {
+              for (let j = steps.from || 0; ar[j] && (typeof steps.to === 'number' ? j <= steps.to : true); j++) {
+                art.push(ar[j]);
               }
             } else if (typeof steps === 'number' && ar[steps]) {
               art.push(ar[steps]);
