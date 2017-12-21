@@ -235,6 +235,12 @@ function parseArguments() {
           }
         }
         break;
+      case '-n':
+      case '--debugonfail':
+        if (value){
+          options.debugonfail = value;
+        }
+        break;
       case '-t':
       case '--type':
         if (value){
@@ -274,14 +280,14 @@ function getArp(jsondir, fn) {
   if (filesMap[bname]) return filesMap[bname];
   const ar = [bname];
   try {
-    ar.push(require(`${jsondir}/${fn}`));
+    ar.push(require(`${jsondir}/${bname}`));
   } catch(er) {
     ar.push({ tests : [] });
   }
   try {
-    let base = fn.split('.');
+    let base = bname.split('.');
     base.pop();
-    base = bas.join('.');
+    base = base.join('.');
     ar.push(require(`${jsondir}/${base}`));
   } catch(er) {
     ar.push({});
@@ -386,19 +392,19 @@ exports.getOptions = function getOptions(options) {
     }
   }
 
+  if ((typeof options.jsondir !== 'string' || !options.jsondir.length)
+    && (typeof options.file === 'string' && options.file.length)) {
+    options.jsondir = dirname(options.file);
+  }
+
   if (typeof options.file === 'string' && options.file.length) {
-    OPTS.fileArray = [[basename(options.file), require(options.file), { EVAL: eval }]];
+    OPTS.fileArray = [getArp(options.jsondir, options.file)];
   } else if (typeof options.jsondir === 'string' && options.jsondir.length) {
     OPTS.fileArray = readdirSync(options.jsondir)
       .filter(fn => fn.endsWith('.json'))
       .map(getArp.bind(null, options.jsondir));
   } else if (!(options.file instanceof Promise)) {
     throw new Error('`jsondir` must be present in the options.');
-  }
-
-  if ((typeof options.jsondir !== 'string' || !options.jsondir.length)
-    && (typeof options.file === 'string' && options.file.length)) {
-    options.jsondir = dirname(options.file);
   }
 
   if (typeof options.jsondir === 'string' && options.jsondir.length) {
@@ -432,6 +438,12 @@ exports.getOptions = function getOptions(options) {
     OPTS.debug = options.debug;
   } else {
     OPTS.debug = '';
+  }
+
+  if (typeof options.debugonfail === 'string' && options.debugonfail.length) {
+    OPTS.debugonfail = options.debugonfail;
+  } else {
+    OPTS.debugonfail = '';
   }
 
   let vars = {};

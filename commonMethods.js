@@ -26,7 +26,7 @@ exports.getReqObj = function(that, OPTS, test, fileData, done, noti) {
       vars[nk] = OPTS.replace(test.vars[ky], vars, methods);
     });
   }
-  const input = that.shouldClone ? JSON.parse(JSON.stringify(test.request)) : test.request;
+  const input = that.ARshouldClone ? JSON.parse(JSON.stringify(test.request)) : test.request;
   return {
     reqObj: OPTS.replace(input, vars, methods) || {},
     callback: function callback(err, resp) {
@@ -43,7 +43,14 @@ function asserting(OPTS, block, vars, methods, source) {
       key = asar[z];
       jpath = OPTS.replace(key, vars, methods);
       exp = OPTS.replace(block[key], vars, methods);
-      if (jpath === 'string' && jpath.indexOf('TYPEOF<') === 0) {
+      if (typeof exp === 'object' && !Array.isArray(exp) && exp !== null && exp.assertExpectedValue !== undefined
+          && (typeof exp.assertFunction === 'function' || (typeof exp.assertMethod === 'string' && exp.assertMethod.length))) {
+        if (typeof exp.assertFunction === 'function') {
+          exp.assertFunction(OPTS.jsonquery(source, jpath), exp.assertExpectedValue, source, exp, vars, methods);
+        } else {
+          assert[exp.assertMethod](OPTS.jsonquery(source, jpath), exp.assertExpectedValue);
+        }
+      } else if(typeof jpath === 'string' && jpath.indexOf('TYPEOF<') === 0) {
         assert.deepEqual(typeof OPTS.jsonquery(source, jpath.subsring(7)), exp);
       } else {
         assert.deepEqual(OPTS.jsonquery(source, jpath), exp);

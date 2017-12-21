@@ -10,8 +10,8 @@ exports.init = function init(options) {
   Object.assign(OPTS, getOptions(options));
 };
 
-function getDebug(ob, OPTS, vars, methods) {
-  return OPTS.replace(ob.debug, vars, methods);
+function getDebug(ob, debugFor, OPTS, vars, methods) {
+  return OPTS.replace(ob[debugFor], vars, methods);
 }
 
 function getFinalDebug(tc, ts, main) {
@@ -53,38 +53,54 @@ exports.forTS = function forTS(fileData) {
   if (typeof vars !== 'object' || vars === null) {
     vars = {};
   }
-  if (typeof OPTS.vars === 'object' && OPTS.vars !== null) {
-    OPTS.replace(vars, OPTS.vars);
-    Object.assign(vars, OPTS.vars);
-  }
-  fileData[1].vars = vars;
   const methods = fileData[2];
   vars.LOOPING_ARRAY = [];
-  const mainDebug = getDebug(fileData[1], OPTS, vars);
+  const resolved = {};
   Object.keys(vars).forEach((ky) => {
-    const nk = OPTS.replace(ky, vars, methods);
-    vars[nk] = OPTS.replace(vars[ky], vars, methods);
+    const nk = OPTS.replace(OPTS.replace(ky, resolved, methods), OPTS.vars, methods);
+    resolved[nk] = OPTS.replace(OPTS.replace(vars[ky], resolved, methods), OPTS.vars, methods);
     if (nk !== ky) {
       delete vars[ky];
     }
   });
+  vars = Object.assign({}, OPTS.vars, resolved);
+  fileData[1].vars = vars;
+  const mainDebug = getDebug(fileData[1], 'debug', OPTS, vars, methods);
+  const mainDebugOnFail = getDebug(fileData[1], 'debugonfail', OPTS, vars, methods);
+  const beforeEachFunction = OPTS.replace(fileData[1].beforeEach, vars, methods);
+  if (typeof beforeEachFunction === 'function') {
+    beforeEach(beforeEachFunction);
+  }
+  const afterEachFunction = OPTS.replace(fileData[1].afterEach, vars, methods);
+  if (typeof afterEachFunction === 'function') {
+    afterEach(afterEachFunction);
+  }
+  const beforeFunction = OPTS.replace(fileData[1].before, vars, methods);
+  if (typeof beforeFunction === 'function') {
+    before(beforeFunction);
+  }
+  const afterFunction = OPTS.replace(fileData[1].after, vars, methods);
+  if (typeof afterFunction === 'function') {
+    after(afterFunction);
+  }
   const ln = fileData[1].tests.length;
+  const mochaTS = this;
+  function getSummary(test) {
+    const summ = test.summary || test.testcase || test.it || test.name;
+    return summ
+      ? OPTS.replace(summ, vars, methods)
+      : test.request
+        ? cropString(test.request.url || test.request.payload || 'some unknown test')
+        : 'No Summary';
+  }
   function runATest(ind, maxInd) {
     if (ind < (maxInd || ln) && ind < ln) {
       const test = fileData[1].tests[ind];
-      function getSummary() {
-        const summ = test.summary || test.testcase || test.it || test.name;
-        return summ
-          ? OPTS.replace(summ, vars, methods)
-          : test.request
-            ? cropString(test.request.url || test.request.payload || 'some unknown test')
-            : 'No Summary';
-      }
       let batch = 1;
       if (!OPTS.replace(test.disabled, vars, methods) && (!OPTS.steps || OPTS.steps.indexOf(ind) !== -1)) {
         let looping = OPTS.replace(test.looping, vars, methods);
         if (looping === undefined || looping === null || looping) {
-          function execTest(that, shouldClone, inde, looping, done) {
+          function execTest(that, shouldClone, inde, mochaIndex, looping, done) {
             vars.$ = inde;
             let sleep = OPTS.replace(test.sleep, vars, methods);
             let tto = OPTS.replace(test.timeout, vars, methods);
@@ -92,18 +108,20 @@ exports.forTS = function forTS(fileData) {
               vars.$ = inde;
               vars.LOOPING_ARRAY = looping;
               if (ifConditionFailed(OPTS.replace(test.condition, vars, methods))) {
+                that.test.ARdisabled = true;
                 return done();
               }
-              that.shouldClone = shouldClone;
+              that.ARshouldClone = shouldClone;
               function executing(whileIndex, cb) {
                 vars.WHILE_INDEX = whileIndex;
-                const currDebug = getDebug(test, OPTS, vars, methods);
+                const currDebug = getDebug(test, 'debug', OPTS, vars, methods);
+                const currDebugOnFail = getDebug(test, 'debugonfail', OPTS, vars, methods);
                 require(`./types/${test.type || fileData[1].type || OPTS.type}`)
-                  .call(that, OPTS, test, fileData, cb, OPTS.logger.bind(OPTS, getFinalDebug(currDebug, mainDebug, OPTS.debug)));
+                  .call(that, OPTS, test, fileData, cb, OPTS.logger.bind(OPTS, that.test, getFinalDebug(currDebug, mainDebug, OPTS.debug), getFinalDebug(currDebugOnFail, mainDebugOnFail, OPTS.debugonfail)));
               }
               const resolvedwhile = resolveWhile(test.while, OPTS);
               if (resolvedwhile) {
-                that.shouldClone = true;
+                that.ARshouldClone = true;
                 function loopingFunction(curIndex){
                   setTimeout(() => {
                     if (ifConditionFailed(OPTS.replace(resolvedwhile.while, vars, methods))) {
@@ -133,8 +151,9 @@ exports.forTS = function forTS(fileData) {
             }
           }
           if (maxInd) {
-            let nowInd = vars.$;
-            it(getSummary(), function(done) { execTest(this, true, nowInd, vars.LOOPING_ARRAY, done); });
+            const nowInd = vars.$;
+            const mochaIndex = mochaTS.tests.length - 1;
+            it(getSummary(test), function(done) { execTest(this, true, nowInd, mochaIndex, vars.LOOPING_ARRAY, done); });
             return runATest(ind+1, maxInd);
           } else {
             if (typeof looping === 'object' && looping !== null) {
@@ -150,14 +169,18 @@ exports.forTS = function forTS(fileData) {
             if (typeof looping === 'number') looping = Array.apply(null, Array(looping)).map((x, i) => i);
             else if (!Array.isArray(looping)) looping = [looping];
             vars.LOOPING_ARRAY = looping;
-            looping.forEach((lp, lin) => {
+            function forOneLoop(lin) {
+              if (lin === looping.length) return;
               vars.$ = lin;
-              let shouldClone = batch > 1 || looping.length > 1;
-              it(getSummary(), function(done){ execTest(this, shouldClone, lin, looping, done); });
+              const shouldClone = batch > 1 || looping.length > 1;
+              const mochaIndex = mochaTS.tests.length - 1;
+              it(getSummary(test), function(done){ execTest(this, shouldClone, lin, mochaIndex, looping, done); });
               if (batch > 1) {
                 runATest(ind + 1, ind + batch);
               }
-            });
+              forOneLoop(lin + 1);
+            };
+            forOneLoop(0);
           }
         }
       }
@@ -172,7 +195,7 @@ exports.forTS = function forTS(fileData) {
 exports.start = function start(){
   if (typeof OPTS.debug === 'string' && OPTS.debug.indexOf('unhandledRejection') !== -1) {
     process.on('unhandledRejection', (reason) => {
-        console.error('Unhandled Rejection. Reason:', reason);
+      console.error('\nUnhandled Rejection. Reason:', reason);
     });
   }
   if (typeof OPTS.beforeEach === 'function') {

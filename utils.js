@@ -8,23 +8,29 @@ const { replace, request, stringify } = methods;
  * @param {String} header header to print before the log
  * @param {Object} data the log data
  */
-exports.logger = function logger(debug, header, data) {
-  if (debug) {
-    const hdr = ` ==> ${header}`;
-    let qr = '';
+exports.logger = function logger(test, debug, debugonfail, header, data) {
+  let toRet = [];
+  if (debug || debugonfail) {
+    let qr = [];
     let toDebug = false;
-    debug.split(',').forEach((db) => {
-      let queryVal = exports.jsonquery(data, db);
-      if (queryVal !== undefined) {
-        qr += `${db} => \n${stringify(queryVal, true)}\n`;
-        toDebug = true;
+    ((debug ? (debug + ',') : '') + (debugonfail || '')).split(',').forEach((db) => {
+      if (db.length){
+        let queryVal = exports.jsonquery(data, db);
+        if (queryVal !== undefined) {
+          qr.push([db, queryVal]);
+          toDebug = true;
+        }
       }
     });
     if (toDebug) {
-      console.log(hdr);
-      console.log(qr);
+      toRet = [header, qr];
+      if (debug || debugonfail) {
+        test.ARdebuggedFor = debugonfail ? 'F': 'P';
+        test.ARdebuggedLogs = (test.ARdebuggedLogs || []).concat([toRet]);
+      }
     }
   }
+  return toRet;
 };
 
 exports.cropString = function cropString(str, ln = 100) {

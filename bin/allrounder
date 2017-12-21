@@ -12,6 +12,9 @@ const mochaOptions = options.mocha || {};
 if (options.bail) {
   mochaOptions.bail = options.bail;
 }
+if (mochaOptions.reporter === undefined) {
+  mochaOptions.reporter = require('../reporter');
+}
 const mocha = new Mocha(mochaOptions);
 mocha.addFile(path.join(__dirname, '../test'));
 
@@ -44,6 +47,6 @@ resolveFile(function(){
         && (typeof options.vars === 'object' && options.vars !== null)) {
       writeFileSync(options.pipePath, JSON.stringify(options.vars, undefined, 2));
     }
-    process.exit(ex);
+    process.exit(ex ? 1 : 0);
   });
 });
