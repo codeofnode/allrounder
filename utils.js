@@ -25,7 +25,7 @@ exports.logger = function logger(test, debug, debugonfail, header, data) {
     if (toDebug) {
       toRet = [header, qr];
       if (debug || debugonfail) {
-        test.ARdebuggedFor = debugonfail ? 'F': 'P';
+        test.ARdebuggedFor = (debugonfail && debug) ? 'P' : (debugonfail ? 'F': 'P');
         test.ARdebuggedLogs = (test.ARdebuggedLogs || []).concat([toRet]);
       }
     }

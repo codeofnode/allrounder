@@ -1,7 +1,7 @@
 const assert = require('assert');
 const { options } = require('./extractArgs');
 
-function postTC(OPTS, vars, methods, test, done, noti, err, resp) {
+function postTC(OPTS, vars, methods, test, noti, err, resp) {
   const mainResp = err || resp;
   noti('RESPONSE', mainResp);
   extracting(OPTS, test.extractors, vars, methods, mainResp);
@@ -14,7 +14,6 @@ function postTC(OPTS, vars, methods, test, done, noti, err, resp) {
     }
   }
   options.vars = vars;
-  done();
 };
 
 exports.getReqObj = function(that, OPTS, test, fileData, done, noti) {
@@ -27,10 +26,17 @@ exports.getReqObj = function(that, OPTS, test, fileData, done, noti) {
     });
   }
   const input = that.ARshouldClone ? JSON.parse(JSON.stringify(test.request)) : test.request;
+  const beforeFunction = OPTS.replace(test.before, vars, methods);
+  if (typeof beforeFunction === 'function') beforeFunction.call(that, vars, methods, null, null, OPTS, test, done);
   return {
+    vars,
+    methods,
     reqObj: OPTS.replace(input, vars, methods) || {},
     callback: function callback(err, resp) {
-      postTC(OPTS, vars, methods, test, done, noti, err, resp);
+      postTC(OPTS, vars, methods, test, noti, err, resp);
+      const afterFunction = OPTS.replace(test.after, vars, methods);
+      if (typeof afterFunction === 'function') afterFunction.call(that, vars, methods, err, resp, OPTS, test, done);
+      done();
     }
   };
 };

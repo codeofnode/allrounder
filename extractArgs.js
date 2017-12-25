@@ -67,7 +67,9 @@ function parseReq(splits) {
   } else {
     options.type = 'rest';
   }
+  const test = { ARtestIndex : 0 };
   const request = {};
+  test.request = request;
   switch(options.type) {
     case 'command':
       request.payload = splits[1];
@@ -79,16 +81,17 @@ function parseReq(splits) {
       }
       break;
     case 'db':
-      request.dbName = splits[1];
-      request.connectionName = splits[2];
-      if (splits[3]) {
-        request.payload = getObjectFromFileOrArgument(splits[3]);
+      test.dbConfig = getObjectFromFileOrArgument(splits[1]);
+      if (typeof test.dbConfig === 'string') {
+        test.dbConfig = { dbUrl : test.dbConfig };
       }
-      if (splits[4]) {
-        request.dbConfig = getObjectFromFileOrArgument(splits[4]);
+      if (typeof test.dbConfig.dbUrl !== 'string') throw new Error('A valid connection url is required to connect with database.');
+      if (test.dbConfig.dbUrl.indexOf('mongodb') === 0) {
+        test.dbConfig.driverName = 'mongodb';
       }
+      request.payload = getObjectFromFileOrArgument(splits[2]);
       if (!options.debug) {
-        options.debug = 'payload,output,message';
+        options.debug = 'payload,output,error';
       }
       break;
     default:
@@ -114,9 +117,7 @@ function parseReq(splits) {
       }
   }
   options.file = new Promise((res, rej) => {
-    res({
-      tests: [{ request: request }]
-    });
+    res({ tests: [test] });
   });
 }
 
@@ -253,6 +254,16 @@ function parseArguments() {
           options.debug = value;
         }
         break;
+      case '--output':
+        if (value){
+          options.output = value;
+        }
+        break;
+      case '--stacktrace':
+        if (value){
+          options.stacktrace = value;
+        }
+        break;
       case '-h':
       case '--help':
       case '-v':
@@ -288,17 +299,29 @@ function getArp(jsondir, fn) {
     let base = bname.split('.');
     base.pop();
     base = base.join('.');
-    ar.push(require(`${jsondir}/${base}`));
+    ar.push(require(`${jsondir}/${base}.js`));
   } catch(er) {
     ar.push({});
   }
   if (typeof ar[2].EVAL !== 'function') ar[2].EVAL = eval;
+  ar.push(JSON.stringify(ar[1]));
   filesMap[bname] = ar;
   return ar;
 }
 
 function getTests(fl) {
   return fl.tests || fl.testcases || fl.steps || fl.entries || fl.records;
+}
+
+function getNthActiveElement(ar, ind, retInd) {
+  for(let cn = -1, i = 0, ln = ar.length;i <ln;i++) {
+    if (!(ar[i].neg)) {
+      cn++;
+    }
+    if (cn === ind) {
+      return retInd ? i : ar[i];
+    }
+  }
 }
 
 function resolveJson (fa) {
@@ -313,7 +336,7 @@ function resolveJson (fa) {
           tests[z].import += '.json';
         }
         let arp = getArp(options.jsondir, tests[z].import);
-        let ar = arp[1];
+        let ar = JSON.parse(arp[3]);
         if (tests[z].fetchVars !== false) {
           if (typeof ar.vars === 'object' && ar.vars !== null) {
             fl.vars = Object.assign({}, ar.vars, fl.vars);
@@ -330,22 +353,25 @@ function resolveJson (fa) {
           ar = getTests(ar);
         }
         if (Array.isArray(ar)) {
-          ar = JSON.parse(JSON.stringify(ar));
           if (steps !== undefined) {
             const art = [];
             if (Array.isArray(steps)) {
               steps.forEach(st => {
                 if (typeof st === 'number' && ar[st]) {
-                  art.push(ar[st]);
+                  const ae = getNthActiveElement(ar, st);
+                  art.push(Object.assign(ae, { neg: ae.neg === undefined ? tests[z].neg : ae.neg }));
                 }
               });
             } else if (typeof steps === 'object' && steps !== null
                 && (typeof steps.from === 'number' || typeof steps.to === 'number')) {
-              for (let j = steps.from || 0; ar[j] && (typeof steps.to === 'number' ? j <= steps.to : true); j++) {
-                art.push(ar[j]);
+              let ffrom = getNthActiveElement(ar, steps.from || 0, true);
+              let fto = typeof steps.to !== 'number' ? ar.length - 1 : getNthActiveElement(ar, steps.to, true);
+              for (let st = ffrom; ar[st] && st <= fto; st++) {
+                art.push(Object.assign(ar[st], { neg: ar[st].neg === undefined ? tests[z].neg : ar[st].neg }));
               }
             } else if (typeof steps === 'number' && ar[steps]) {
-              art.push(ar[steps]);
+              const ae = getNthActiveElement(ar, steps);
+              art.push(Object.assign(ae, { neg: ae.neg === undefined ? tests[z].neg : ae.neg }));
             }
             ar = art;
           }
@@ -355,8 +381,13 @@ function resolveJson (fa) {
         }
       }
     }
+    tests.forEach((tt,ind) => { tt.ARtestIndex = ind; });
     fl.tests = tests;
   }
+}
+
+function afterResolve(jsondir, fa) {
+  getArp(jsondir, fa[0]).pop();
 }
 
 /**
@@ -402,6 +433,7 @@ exports.getOptions = function getOptions(options) {
   } else if (typeof options.jsondir === 'string' && options.jsondir.length) {
     OPTS.fileArray = readdirSync(options.jsondir)
       .filter(fn => fn.endsWith('.json'))
+      .sort()
       .map(getArp.bind(null, options.jsondir));
   } else if (!(options.file instanceof Promise)) {
     throw new Error('`jsondir` must be present in the options.');
@@ -409,10 +441,15 @@ exports.getOptions = function getOptions(options) {
 
   if (typeof options.jsondir === 'string' && options.jsondir.length) {
     OPTS.fileArray.forEach(resolveJson);
+    OPTS.fileArray.forEach(afterResolve.bind(null, options.jsondir));
   }
 
   if (options.bail !== 0) {
     OPTS.bail = 1;
+  }
+
+  if (options.stacktrace !== 1) {
+    OPTS.stacktrace = 0;
   }
 
   if (options.insecure === 1) {
@@ -444,6 +481,10 @@ exports.getOptions = function getOptions(options) {
     OPTS.debugonfail = options.debugonfail;
   } else {
     OPTS.debugonfail = '';
+  }
+
+  if (typeof options.output === 'string' && options.output.length) {
+    OPTS.output = getStringValue(options.output, true);
   }
 
   let vars = {};

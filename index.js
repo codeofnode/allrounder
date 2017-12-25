@@ -1,4 +1,5 @@
 const { getOptions } = require('./extractArgs');
+const { basename } = require('path');
 const { cropString } = require('./utils');
 const { URL } = require('url');
 
@@ -6,8 +7,12 @@ const OPTS = {
   fileArray: []
 };
 
-exports.init = function init(options) {
-  Object.assign(OPTS, getOptions(options));
+exports.init = function init(options, preResolved) {
+  if (preResolved) {
+    Object.assign(OPTS, options);
+  } else {
+    Object.assign(OPTS, getOptions(options));
+  }
 };
 
 function getDebug(ob, debugFor, OPTS, vars, methods) {
@@ -33,11 +38,11 @@ function ifConditionFailed(condition){
   }
 }
 
-function resolveWhile(inputwhile, OPTS){
+function resolveWhile(inputwhile, OPTS, ts){
   if (typeof inputwhile === 'string') {
     return {
       while : inputwhile,
-      interval: OPTS.whileinterval
+      interval: typeof ts.whileinterval === 'number' ? ts.whileinterval : OPTS.whileinterval
     };
   } else if (typeof inputwhile === 'object' && inputwhile !== null
     && typeof inputwhile.while === 'string' && typeof inputwhile.interval === 'number') {
@@ -49,21 +54,18 @@ exports.forTS = function forTS(fileData) {
   if (OPTS.timeout) {
     this.timeout(OPTS.timeout);
   }
-  let vars = fileData[1].vars;
-  if (typeof vars !== 'object' || vars === null) {
-    vars = {};
-  }
+  let vars = Object.assign({}, fileData[1].vars, OPTS.vars);
   const methods = fileData[2];
   vars.LOOPING_ARRAY = [];
   const resolved = {};
   Object.keys(vars).forEach((ky) => {
-    const nk = OPTS.replace(OPTS.replace(ky, resolved, methods), OPTS.vars, methods);
-    resolved[nk] = OPTS.replace(OPTS.replace(vars[ky], resolved, methods), OPTS.vars, methods);
+    const nk = OPTS.replace(ky, Object.assign({},OPTS.vars,resolved), methods);
+    resolved[nk] = OPTS.replace(vars[ky], Object.assign({},OPTS.vars,resolved), methods);
     if (nk !== ky) {
       delete vars[ky];
     }
+    vars[nk] = resolved[nk];
   });
-  vars = Object.assign({}, OPTS.vars, resolved);
   fileData[1].vars = vars;
   const mainDebug = getDebug(fileData[1], 'debug', OPTS, vars, methods);
   const mainDebugOnFail = getDebug(fileData[1], 'debugonfail', OPTS, vars, methods);
@@ -101,6 +103,8 @@ exports.forTS = function forTS(fileData) {
         let looping = OPTS.replace(test.looping, vars, methods);
         if (looping === undefined || looping === null || looping) {
           function execTest(that, shouldClone, inde, mochaIndex, looping, done) {
+            that.test.ARignoreIfFailed = test.neg;
+            that.test.ARtestIndex = test.ARtestIndex;
             vars.$ = inde;
             let sleep = OPTS.replace(test.sleep, vars, methods);
             let tto = OPTS.replace(test.timeout, vars, methods);
@@ -119,7 +123,7 @@ exports.forTS = function forTS(fileData) {
                 require(`./types/${test.type || fileData[1].type || OPTS.type}`)
                   .call(that, OPTS, test, fileData, cb, OPTS.logger.bind(OPTS, that.test, getFinalDebug(currDebug, mainDebug, OPTS.debug), getFinalDebug(currDebugOnFail, mainDebugOnFail, OPTS.debugonfail)));
               }
-              const resolvedwhile = resolveWhile(test.while, OPTS);
+              const resolvedwhile = resolveWhile(test.while, OPTS, fileData[1]);
               if (resolvedwhile) {
                 that.ARshouldClone = true;
                 function loopingFunction(curIndex){
@@ -206,7 +210,7 @@ exports.start = function start(){
   }
   OPTS.fileArray.forEach((fileData) => {
     const flnm = fileData[0].split('.').shift();
-    if (!fileData[1].disabled && (!OPTS.file || OPTS.file === flnm)) {
+    if (!fileData[1].disabled && (!OPTS.file || basename(OPTS.file) === fileData[0])) {
       describe(fileData[1].testsuite || fileData[1].scenario || flnm, function(){
         exports.forTS.call(this, fileData);
       });

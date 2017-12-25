@@ -1,17 +1,27 @@
 
-const { MongoClient, ObjectId } = require('mongodb');
+// Supporting Mongo DB : ^3.0.1
+
+let MongoModule, MongoClient, ObjectId;
+
+function resolveMongoDriver (driverPath) {
+  if (!MongoModule) {
+    if (!driverPath){
+      try {
+        MongoModule = require('mongodb');
+      } catch (er) {
+      }
+    }
+    if (!MongoModule){
+      MongoModule = require(driverPath);
+    }
+    MongoClient = MongoModule.MongoClient;
+    ObjectId = MongoModule.ObjectId;
+  }
+}
 
 /*
- * sample input for vars
+ * sample input for reqObj
 {
-  "dbName": "mongodb",
-  "connectionName": "mongodb1",
-  "dbConfig": {
-    "url": "mongodb://localhost/colormaster",
-    "options": {
-      "connection": "options"
-    }
-  },
   "paylaod" :{
     "collection" : "<Collection Name>",
     "command" : "<function to call, eg findOne, find, remove, update etc>",
@@ -21,21 +31,40 @@ const { MongoClient, ObjectId } = require('mongodb');
 }
 */
 
+/*
+ * sample input for dbConfig
+{
+  "dbConfig": {
+    "driverName": "mongodb",
+    "driverPath" : "/path/to/mongodb/driver",
+    "connectionName": "mongodb1",
+    "dbUrl": "mongodb://localhost",
+    "dbName": "mydb",
+    "options": {
+      "connection": "options"
+    }
+  }
+}
+*/
+
+
 const connectionMap = {};
 
-module.exports = function mongodb(vars, next) {
+module.exports = function mongodb(reqObj, dbConfig, next) {
+  resolveMongoDriver(dbConfig.driverPath);
   function afterConnection(ert, con) {
-    if (!connectionMap.hasOwnProperty(vars.connectionName)) {
-      connectionMap[vars.connectionName] = con;
-    }
-    const query = vars.payload;
-    if(ert) {
-      next({ message : ert.message || ert, status : 400 });
+    if(ert || !con) {
+      next({ error : ert.message || ert || "connection failure", status : 400 });
     } else {
+      const db = con.db(dbConfig.dbName || dbConfig.dbUrl.split('?').shift().split('/').pop());
+      if (!connectionMap.hasOwnProperty(dbConfig.connectionName)) {
+        connectionMap[dbConfig.connectionName] = db;
+      }
+      const query = reqObj.payload;
       let col;
-      try { col = con.collection(query && query.collection); } catch(erm){ }
+      try { col = db.collection(query && query.collection); } catch(erm){ }
       if (!col){
-        return next({message : "Collection not available", code : 'COL_NOT_AVL', status : 400 });
+        return next({error : "Collection not available", code : 'COL_NOT_AVL', status : 400 });
       }
       if (typeof col[query.command] !== 'function'){
         query.command = 'find';
@@ -48,11 +77,11 @@ module.exports = function mongodb(vars, next) {
       try {
         cur = col[query.command].apply(col, query.args);
       } catch(er){
-        return next({ message : (er.message || er), status : 400 });
+        return next({ error : (er.message || er), status : 400 });
       }
       const callback = function(er, rs){
         if(er) {
-          next({ message : er.message || er, status : 400 });
+          next({ error : er.message || er, status : 400 });
         } else {
           next({ output : rs, status : 200 });
         }
@@ -80,16 +109,16 @@ module.exports = function mongodb(vars, next) {
         if(cur && typeof cur.toArray === 'function'){
           cur.toArray(callback);
         } else {
-          next({ message : 'Invalid cursor calls.', status : 400 });
+          next({ error : 'Invalid cursor calls.', status : 400 });
         }
       } else {
-        next({ message : '`command` must return a promise or cursor.', status : 400 });
+        next({ error : '`command` must return a promise or cursor.', status : 400 });
       }
     }
   };
-  if (connectionMap.hasOwnProperty(vars.connectionName)) {
-    afterConnection(null, connectionMap[vars.connectionName]);
+  if (connectionMap.hasOwnProperty(dbConfig.connectionName)) {
+    afterConnection(null, connectionMap[dbConfig.connectionName]);
   } else {
-    MongoClient.connect(vars.dbConfig.url, vars.dbConfig.options, afterConnection);
+    MongoClient.connect(dbConfig.dbUrl, dbConfig.options, afterConnection);
   }
 };

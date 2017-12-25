@@ -3,7 +3,7 @@
 const Mocha = require('mocha');
 const path = require('path');
 const os = require('os');
-const { mkdirSync, writeFileSync, readdirSync } = require('fs');
+const { mkdirSync, writeFileSync } = require('fs');
 const { options, getOptions, parseArguments } = require('../extractArgs');
 parseArguments();
 Object.assign(options, getOptions(options));
@@ -15,6 +15,10 @@ if (options.bail) {
 if (mochaOptions.reporter === undefined) {
   mochaOptions.reporter = require('../reporter');
 }
+if (mochaOptions.fullStackTrace === undefined) {
+  mochaOptions.fullStackTrace = false;
+}
+mochaOptions.reporterOptions = Object.assign({ output: options.output }, mochaOptions.reporterOptions);
 const mocha = new Mocha(mochaOptions);
 mocha.addFile(path.join(__dirname, '../test'));
 
@@ -31,6 +35,7 @@ const resolveFile = function resolveFile(cb){
       }
       options.file = `${tmpdir}/allroundertests/test.json`;
       writeFileSync(options.file, JSON.stringify(resp, undefined, 2));
+      options.fileArray = [['test.json', resp, { EVAL: eval }]];
       cb();
     }).catch(function(er){
       console.log(er);
@@ -42,11 +47,21 @@ const resolveFile = function resolveFile(cb){
 };
 
 resolveFile(function(){
-  mocha.run(function(ex){
+  var firstBailFlag;
+  const runner = mocha.run(function(ex){
     if ((typeof options.pipePath === 'string' && options.pipePath.length)
         && (typeof options.vars === 'object' && options.vars !== null)) {
       writeFileSync(options.pipePath, JSON.stringify(options.vars, undefined, 2));
     }
     process.exit(ex ? 1 : 0);
+  });
+  runner.on('suite', function (suite) {
+    firstBailFlag = suite._bail;
+  });
+  runner.on('fail', function (test, err) {
+    if (!options.stacktrace) delete err.stack;
+    if (firstBailFlag) {
+      runner.suite._bail = test.ARignoreIfFailed ? false : true;
+    }
   });
 });
