@@ -16,7 +16,11 @@ let parsingDone = false;
 function getObjectFromFileOrArgument (inp) {
   if (typeof inp === 'string') {
     try {
-      return require(getStringValue(inp, true));
+      return require(getStringValue(inp, true)+ '.json');
+    } catch (er) {
+    }
+    try {
+      return require(getStringValue(inp, true)+ '.js');
     } catch (er) {
     }
     try {
@@ -313,7 +317,7 @@ function getArp(jsondir, fn) {
   } catch(er) {
     ar.push({});
   }
-  Object.assign({}, globalMethods, ar[2]);
+  ar[2] = Object.assign({}, globalMethods, ar[2]);
   ar.push(JSON.stringify(ar[1]));
   filesMap[bname] = ar;
   return ar;
