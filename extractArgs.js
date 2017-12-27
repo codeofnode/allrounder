@@ -15,11 +15,9 @@ let parsingDone = false;
 
 function getObjectFromFileOrArgument (inp) {
   if (typeof inp === 'string') {
-    if (inp.endsWith('.json')) {
-      try {
-        return require(getStringValue(inp, true));
-      } catch (er) {
-      }
+    try {
+      return require(getStringValue(inp, true));
+    } catch (er) {
     }
     try {
       return JSON.parse(inp);
@@ -27,6 +25,10 @@ function getObjectFromFileOrArgument (inp) {
     }
   }
   return inp;
+};
+
+const globalMethods = {
+  EVAL: eval
 };
 
 function resolvePipe(value, options) {
@@ -184,6 +186,14 @@ function parseArguments() {
           options.mocha = getObjectFromFileOrArgument(value);
         }
         break;
+      case '--utility':
+        if (value){
+          const utilityObj = getObjectFromFileOrArgument(value);
+          if (typeof utilityObj === 'object') {
+            Object.assign(globalMethods, utilityObj);
+          }
+        }
+        break;
       case '-p':
       case '--pipe':
         if (value) {
@@ -303,7 +313,7 @@ function getArp(jsondir, fn) {
   } catch(er) {
     ar.push({});
   }
-  if (typeof ar[2].EVAL !== 'function') ar[2].EVAL = eval;
+  Object.assign({}, globalMethods, ar[2]);
   ar.push(JSON.stringify(ar[1]));
   filesMap[bname] = ar;
   return ar;
@@ -514,8 +524,10 @@ exports.getOptions = function getOptions(options) {
   OPTS.request = ((typeof options.request === 'function') ? options : utils).request;
   OPTS.replace = ((typeof options.replace === 'function') ? options : utils).replace;
   OPTS.jsonquery = ((typeof options.jsonquery === 'function') ? options : utils).jsonquery;
-  OPTS.beforeEach = options.beforeEach;
-  OPTS.afterEach = options.afterEach;
+  OPTS.beforeEach = ((typeof options.beforeEach === 'function') ? options : globalMethods).beforeEach;
+  OPTS.afterEach = ((typeof options.afterEach === 'function') ? options : globalMethods).afterEach;
+  OPTS.beforeEachTest = ((typeof options.beforeEachTest === 'function') ? options : globalMethods).beforeEachTest;
+  OPTS.afterEachTest = ((typeof options.afterEachTest === 'function') ? options : globalMethods).afterEachTest;
 
   return OPTS;
 };

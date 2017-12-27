@@ -69,11 +69,11 @@ exports.forTS = function forTS(fileData) {
   fileData[1].vars = vars;
   const mainDebug = getDebug(fileData[1], 'debug', OPTS, vars, methods);
   const mainDebugOnFail = getDebug(fileData[1], 'debugonfail', OPTS, vars, methods);
-  const beforeEachFunction = OPTS.replace(fileData[1].beforeEach, vars, methods);
+  const beforeEachFunction = OPTS.replace(fileData[1].beforeEach || OPTS.beforeEachTest, vars, methods);
   if (typeof beforeEachFunction === 'function') {
     beforeEach(beforeEachFunction);
   }
-  const afterEachFunction = OPTS.replace(fileData[1].afterEach, vars, methods);
+  const afterEachFunction = OPTS.replace(fileData[1].afterEach || OPTS.afterEachTest, vars, methods);
   if (typeof afterEachFunction === 'function') {
     afterEach(afterEachFunction);
   }
