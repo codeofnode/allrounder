@@ -47,7 +47,7 @@ const resolveFile = function resolveFile(cb){
 };
 
 resolveFile(function(){
-  var firstBailFlag;
+  let firstBailFlag;
   const runner = mocha.run(function(ex){
     if ((typeof options.pipePath === 'string' && options.pipePath.length)
         && (typeof options.vars === 'object' && options.vars !== null)) {

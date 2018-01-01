@@ -37,21 +37,21 @@ const exec = function exec(method, context, payload, construct, isAsync, cb) {
 };
 
 module.exports = function forTC(OPTS, test, fileData, done, noti) {
-  const { reqObj, callback } = getReqObj(this, OPTS, test, fileData, done, noti);
+  const { vars, methods, reqObj, callback } = getReqObj(this, OPTS, test, fileData, done, noti);
   if (!reqObj) return done();
   if (reqObj.params && reqObj.payload === undefined) {
     reqObj.payload = reqObj.params;
     delete reqObj.params;
   }
   noti('UNIT_TEST', reqObj);
-  const vars = fileData[1].vars;
-  const methods = fileData[2];
   let unit;
   const requi = test.require || fileData[1].require;
   if (requi) {
     const path = OPTS.replace(requi, vars, methods);
     if (typeof path === 'string') {
-      if (isAbsolute(path)) {
+      if (path === '$global') {
+        unit = global;
+      } else if (isAbsolute(path)) {
         unit = require(path);
       } else {
         try {

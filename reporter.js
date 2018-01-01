@@ -18,12 +18,12 @@ exports = module.exports = AllRounderReporter;
 function AllRounderReporter (runner, options) {
   Base.call(this, runner);
 
-  var self = this;
-  var indents = 0;
-  var suiteName;
-  var firstSuiteName;
-  var outputFileStarted = false;
-  var n = 0;
+  let self = this;
+  let indents = 0;
+  let suiteName;
+  let firstSuiteName;
+  let outputFileStarted = false;
+  let n = 0;
   if (options.reporterOptions.output) {
     if (!fs.createWriteStream) {
       throw new Error('file output not supported in browser');
