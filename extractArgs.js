@@ -425,7 +425,7 @@ exports.getOptions = function getOptions(options) {
   if (!options.read){
     const readFile = join(cwd, 'allrounder.json');
   }
-  const read = {};
+  let read = {};
   try {
     read = require(readFile);
   } catch(er){

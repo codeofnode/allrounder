@@ -15,15 +15,19 @@ const exec = function exec(method, context, payload, construct, isAsync, cb) {
       return prevCb.apply(undefined, arguments);
     };
   }
-  if (construct) {
-    if (payload.length) {
-      payload.unshift(null);
-      ret = new (Function.prototype.bind.apply(method, payload));
+  try {
+    if (construct) {
+      if (payload.length) {
+        payload.unshift(null);
+        ret = new (Function.prototype.bind.apply(method, payload));
+      } else {
+        ret = new (Function.prototype.bind.apply(method));
+      }
     } else {
-      ret = new (Function.prototype.bind.apply(method));
+      ret = method.apply(context, payload);
     }
-  } else {
-    ret = method.apply(context, payload);
+  } catch (er) {
+    return cb(er);
   }
   if (returnWithCB) return;
   if ((isAsync !== false) && (ret instanceof Promise)) {
