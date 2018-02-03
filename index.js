@@ -67,6 +67,12 @@ exports.forTS = function forTS(fileData) {
     vars[nk] = resolved[nk];
   });
   fileData[1].vars = vars;
+  if (fileData[1].timeout !== undefined) {
+    const tsTimeout = OPTS.replace(fileData[1].timeout, vars, methods);
+    if (typeof tsTimeout === 'number') {
+      this.timeout(tsTimeout);
+    }
+  }
   const mainDebug = getDebug(fileData[1], 'debug', OPTS, vars, methods);
   const mainDebugOnFail = getDebug(fileData[1], 'debugonfail', OPTS, vars, methods);
   const beforeEachFunction = OPTS.replace(fileData[1].beforeEach || OPTS.beforeEachTest, vars, methods);
@@ -199,7 +205,7 @@ exports.forTS = function forTS(fileData) {
 exports.start = function start(){
   if (typeof OPTS.debug === 'string' && OPTS.debug.indexOf('unhandledRejection') !== -1) {
     process.on('unhandledRejection', (reason) => {
-      console.error('\nUnhandled Rejection. Reason:', reason);
+      throw new Error(reason);
     });
   }
   if (typeof OPTS.beforeEach === 'function') {
