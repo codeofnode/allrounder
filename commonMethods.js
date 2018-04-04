@@ -49,7 +49,7 @@ function asserting(OPTS, block, vars, methods, source) {
       key = asar[z];
       jpath = OPTS.replace(key, vars, methods);
       exp = OPTS.replace(block[key], vars, methods);
-      if (typeof exp === 'object' && !Array.isArray(exp) && exp !== null && exp.assertExpectedValue !== undefined
+      if (typeof exp === 'object' && !Array.isArray(exp) && exp !== null
           && (typeof exp.assertFunction === 'function' || (typeof exp.assertMethod === 'string' && exp.assertMethod.length))) {
         if (typeof exp.assertFunction === 'function') {
           exp.assertFunction(OPTS.jsonquery(source, jpath), exp.assertExpectedValue, source, exp, vars, methods);
