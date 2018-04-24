@@ -352,7 +352,7 @@ function resolveJson (vars, replace, fa) {
     let ln = tests.length;
     for (let z = 0; z < ln; z++) {
       const steps = tests[z].steps;
-      if (typeof tests[z].import === 'string' && !replace(tests[z].disabled, vars)) {
+      if (typeof tests[z].import === 'string' && !replace(tests[z].disabled, Object.assign(fl.vars || {}, vars))) {
         if (!tests[z].import.endsWith('.json')) {
           tests[z].import += '.json';
         }
