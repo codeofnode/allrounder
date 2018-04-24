@@ -338,14 +338,21 @@ function getNthActiveElement(ar, ind, retInd) {
   }
 }
 
-function resolveJson (fa) {
+function createNewStep(ae, og) {
+  return Object.assign(ae, {
+    neg: ae.neg === undefined ? og.neg : ae.neg,
+    condition: ae.condition === undefined ? og.condition : (og.condition ? `(${og.condition}) && (${ae.condition})` : ae.condition),
+  });
+}
+
+function resolveJson (vars, replace, fa) {
   const fl = fa[1];
   const tests = getTests(fl);
   if (Array.isArray(tests)) {
     let ln = tests.length;
     for (let z = 0; z < ln; z++) {
       const steps = tests[z].steps;
-      if (typeof tests[z].import === 'string' && !tests[z].disabled) {
+      if (typeof tests[z].import === 'string' && !replace(tests[z].disabled, vars)) {
         if (!tests[z].import.endsWith('.json')) {
           tests[z].import += '.json';
         }
@@ -372,8 +379,7 @@ function resolveJson (fa) {
             if (Array.isArray(steps)) {
               steps.forEach(st => {
                 if (typeof st === 'number' && ar[st]) {
-                  const ae = getNthActiveElement(ar, st);
-                  art.push(Object.assign(ae, { neg: ae.neg === undefined ? tests[z].neg : ae.neg }));
+                  art.push(createNewStep(getNthActiveElement(ar, steps), tests[z]));
                 }
               });
             } else if (typeof steps === 'object' && steps !== null
@@ -381,11 +387,10 @@ function resolveJson (fa) {
               let ffrom = getNthActiveElement(ar, steps.from || 0, true);
               let fto = typeof steps.to !== 'number' ? ar.length - 1 : getNthActiveElement(ar, steps.to, true);
               for (let st = ffrom; ar[st] && st <= fto; st++) {
-                art.push(Object.assign(ar[st], { neg: ar[st].neg === undefined ? tests[z].neg : ar[st].neg }));
+                art.push(createNewStep(ar[st], tests[z]));
               }
             } else if (typeof steps === 'number' && ar[steps]) {
-              const ae = getNthActiveElement(ar, steps);
-              art.push(Object.assign(ae, { neg: ae.neg === undefined ? tests[z].neg : ae.neg }));
+              art.push(createNewStep(getNthActiveElement(ar, steps), tests[z]));
             }
             ar = art;
           }
@@ -453,8 +458,14 @@ exports.getOptions = function getOptions(options) {
     throw new Error('`jsondir` must be present in the options.');
   }
 
+  let vars = {};
+  if (typeof options.vars === 'object' && options.vars !== null) {
+    vars = options.vars;
+  }
+  OPTS.replace = ((typeof options.replace === 'function') ? options : utils).replace;
+
   if (typeof options.jsondir === 'string' && options.jsondir.length) {
-    OPTS.fileArray.forEach(resolveJson);
+    OPTS.fileArray.forEach(resolveJson.bind(null, vars, OPTS.replace));
     OPTS.fileArray.forEach(afterResolve.bind(null, options.jsondir));
   }
 
@@ -501,10 +512,6 @@ exports.getOptions = function getOptions(options) {
     OPTS.output = getStringValue(options.output, true);
   }
 
-  let vars = {};
-  if (typeof options.vars === 'object' && options.vars !== null) {
-    vars = options.vars;
-  }
   let mocha = {};
   if (typeof options.mocha === 'object' && options.mocha !== null) {
     mocha = options.mocha;
@@ -526,7 +533,6 @@ exports.getOptions = function getOptions(options) {
 
   OPTS.logger = ((typeof options.logger === 'function') ? options : utils).logger;
   OPTS.request = ((typeof options.request === 'function') ? options : utils).request;
-  OPTS.replace = ((typeof options.replace === 'function') ? options : utils).replace;
   OPTS.jsonquery = ((typeof options.jsonquery === 'function') ? options : utils).jsonquery;
   OPTS.beforeEach = ((typeof options.beforeEach === 'function') ? options : globalMethods).beforeEach;
   OPTS.afterEach = ((typeof options.afterEach === 'function') ? options : globalMethods).afterEach;
