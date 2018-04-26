@@ -338,8 +338,8 @@ function getNthActiveElement(ar, ind, retInd) {
   }
 }
 
-function createNewStep(ae, og) {
-  if (typeof ae !== 'object' || ae === null) return ae;
+function createNewStep(og, ae) {
+  if (typeof ae !== 'object' || ae === null || typeof og !== 'object' || og === null) return ae;
   return Object.assign(ae, {
     neg: ae.neg === undefined ? og.neg : ae.neg,
     condition: ae.condition === undefined ? og.condition : (og.condition ? `(${og.condition}) && (${ae.condition})` : ae.condition),
@@ -380,7 +380,7 @@ function resolveJson (vars, replace, fa) {
             if (Array.isArray(steps)) {
               steps.forEach(st => {
                 if (typeof st === 'number' && ar[st]) {
-                  let toPush = createNewStep(getNthActiveElement(ar, st), tests[z]);
+                  let toPush = createNewStep(tests[z], getNthActiveElement(ar, st));
                   if (toPush) art.push(toPush);
                 }
               });
@@ -389,16 +389,18 @@ function resolveJson (vars, replace, fa) {
               let ffrom = getNthActiveElement(ar, steps.from || 0, true);
               let fto = typeof steps.to !== 'number' ? ar.length - 1 : getNthActiveElement(ar, steps.to, true);
               for (let st = ffrom; ar[st] && st <= fto; st++) {
-                let toPush = createNewStep(ar[st], tests[z]);
+                let toPush = createNewStep(tests[z], ar[st]);
                 if (toPush) art.push(toPush);
               }
             } else if (typeof steps === 'number' && ar[steps]) {
-              toPush = createNewStep(getNthActiveElement(ar, steps), tests[z]);
+              toPush = createNewStep(tests[z], getNthActiveElement(ar, steps));
               if (toPush) art.push(toPush);
             }
             ar = art;
+            tests.splice.bind(tests, z, 1).apply(tests, ar);
+          } else {
+            tests.splice.bind(tests, z, 1).apply(tests, ar.map(createNewStep.bind(null, tests[z])));
           }
-          tests.splice.bind(tests, z, 1).apply(tests, ar);
           ln += ar.length - 1;
           z--;
         }
