@@ -58,7 +58,7 @@ module.exports = function mongodb(reqObj, dbConfig, next) {
     } else {
       const db = con.db(dbConfig.dbName || dbConfig.dbUrl.split('?').shift().split('/').pop());
       if (!connectionMap.hasOwnProperty(dbConfig.connectionName)) {
-        connectionMap[dbConfig.connectionName] = db;
+        connectionMap[dbConfig.connectionName] = con;
       }
       const query = reqObj.payload;
       let col;
