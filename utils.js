@@ -45,7 +45,9 @@ exports.cropString = function cropString(str, ln = 100) {
 exports.jsonquery = function jsonquery(data, path) {
   let res = data;
   if (typeof data === 'object' && data !== null) {
-    if (path.indexOf('ARRAY<') === 0) {
+    if (path.indexOf('LEN()<') === 0) {
+      return jsonpath.query(data, path.substring(6)).length;
+    } else if (path.indexOf('ARRAY<') === 0) {
       return jsonpath.query(data, path.substring(6));
     } else if (path.indexOf('<') === 5) {
       const count = parseInt(path.substr(0, 5), 10);
