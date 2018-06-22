@@ -374,6 +374,9 @@ function resolveJson (vars, replace, fa) {
         if (!Array.isArray(ar)) {
           ar = getTests(ar);
         }
+        if (tests[z].vars && ar[0]) {
+          ar[0].vars = tests[z].vars;
+        }
         if (Array.isArray(ar)) {
           if (steps !== undefined) {
             const art = [];
