@@ -374,9 +374,7 @@ function resolveJson (vars, replace, fa) {
         if (!Array.isArray(ar)) {
           ar = getTests(ar);
         }
-        if (tests[z].vars && ar[0]) {
-          ar[0].vars = tests[z].vars;
-        }
+        const preVars = tests[z].vars;
         if (Array.isArray(ar)) {
           if (steps !== undefined) {
             const art = [];
@@ -404,6 +402,7 @@ function resolveJson (vars, replace, fa) {
           } else {
             tests.splice.bind(tests, z, 1).apply(tests, ar.map(createNewStep.bind(null, tests[z])));
           }
+          if (preVars && tests[z]) tests[z].vars = Object.assign(preVars, tests[z].vars);
           ln += ar.length - 1;
           z--;
         }
