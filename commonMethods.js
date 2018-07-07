@@ -56,8 +56,6 @@ function asserting(OPTS, block, vars, methods, source) {
         } else {
           assert[exp.assertMethod](OPTS.jsonquery(source, jpath), exp.assertExpectedValue);
         }
-      } else if(typeof jpath === 'string' && jpath.indexOf('TYPEOF<') === 0) {
-        assert.deepEqual(typeof OPTS.jsonquery(source, jpath.substring(7)), exp);
       } else {
         assert.deepEqual(OPTS.jsonquery(source, jpath), exp);
       }
