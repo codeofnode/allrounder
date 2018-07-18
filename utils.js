@@ -48,7 +48,7 @@ exports.jsonquery = function jsonquery(data, path) {
     if (path.indexOf('LEN()<') === 0) {
       return jsonpath.query(data, path.substring(6)).length;
     } else if(typeof path === 'string' && path.indexOf('TYPEOF<') === 0) {
-      return (typeof OPTS.jsonquery(data, jpath.substring(7)));
+      return (typeof jsonpath.query(data, jpath.substring(7)));
     } else if (path.indexOf('ARRAY<') === 0) {
       return jsonpath.query(data, path.substring(6));
     } else if (path.indexOf('<') === 5) {
