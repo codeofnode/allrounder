@@ -1,7 +1,7 @@
 {
   "name": "allrounder",
-  "version": "0.6.0",
-  "description": "It validate everything. From rest call to dbvalidation to system commands to unit tests. Just almost everything",
+  "version": "0.7.0",
+  "description": "All in one validator for testing, under one roof. From rest call to dbvalidation to system commands to unit tests. Just almost everything",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -29,6 +29,6 @@
   "dependencies": {
     "json2server": "latest",
     "jsonpath": "^1.0.0",
-    "mocha": "^4.0.1"
+    "mocha": "^4.1.0"
   }
 }

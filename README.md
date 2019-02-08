@@ -9,7 +9,7 @@
 #### You can pipe the sesion from one execution to another
 > Yes, can pipe the sessions. So that you can pass the session variables to another execution.
 ```
-allrounder -p=pipeFile.json myfile.json
+allrounder -p pipeFile.json myfile.json
 ```
 
 #### Re-usable components
@@ -30,7 +30,7 @@ allrounder -p=pipeFile.json myfile.json
 #### Remote json
 > You can fetch the json file from remote server as well.
 ```
-allrounder -f=http://myrestserver.com/allrounder-test-file.json
+allrounder -f http://myrestserver.com/allrounder-test-file.json
 ```
 
 #### Looping

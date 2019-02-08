@@ -10,11 +10,16 @@ const utils = require('./utils');
 const options = { };
 const opts = process.argv.slice(2);
 const { name, version, description } = require('./package.json');
-let showHelp;
 let parsingDone = false;
 
 function getObjectFromFileOrArgument (inp) {
   if (typeof inp === 'string') {
+    if (inp.endsWith('.json') || inp.endsWith('.js')) {
+      try {
+        return require(getStringValue(inp, true));
+      } catch (er) {
+      }
+    }
     try {
       return require(getStringValue(inp, true)+ '.json');
     } catch (er) {
@@ -26,6 +31,9 @@ function getObjectFromFileOrArgument (inp) {
     try {
       return JSON.parse(inp);
     } catch (er) {
+      if (inp.indexOf(':') !== -1) {
+        return Object.assign(...inp.split(',').map(st => { const sp=st.split(':'); return { [sp[0]]:sp[1] }}))
+      }
     }
   }
   return inp;
@@ -128,23 +136,41 @@ function parseReq(splits) {
 }
 
 function parseArguments() {
-  opts.forEach(function(arg, oind){
-    if (parsingDone) return;
+  let showHelp, ol = opts.length;
+  for (let k = 0; k < ol; k++) {
+    arg = opts[k];
+    if (parsingDone) break;
     if (showHelp === undefined) {
       showHelp = false;
     }
     const ind = arg.indexOf('=');
     const larg = arg.toLowerCase();
-    const value = getStringValue(arg.substr(ind+1));
+    let value = getStringValue(arg.substr(ind+1));
     let key = larg.substr(0, ind) || larg;
     if (key === '-e' || key === '--exec') {
-      return parseReq(opts.slice(oind));
+      parseReq(opts.slice(k));
+      break;
     }
     if (ind === -1) {
-      if (arg.endsWith('.json')) {
-        key = '-f';
-      } else if (!(arg.startsWith('-'))){
-        key = '-j';
+      if (k+1 === ol && !options.file && !options.jsondir) {
+        if (arg.endsWith('.json')) {
+          key = '-f';
+        } else if (!(arg.startsWith('-'))) {
+          key = '-j';
+        }
+      } else {
+        if (['-bi','-ib'].indexOf(arg) !== -1) {
+          opts.splice(k+1, 0, '-b');
+          arg = key = opts[k] = '-i';
+          ol++;
+        }
+        if (['-b','-i', '--insecure', '--bail'].indexOf(arg) === -1) {
+          k++;
+          value = opts[k];
+        } else {
+          if (opts[k+1] === '1') k++;
+          value = 1
+        }
       }
     }
     switch(key){
@@ -205,6 +231,11 @@ function parseArguments() {
         }
         break;
       case '-s':
+      case '--srcdir':
+        if (value) {
+          options.srcdir = getStringValue(value, true);
+        }
+        break;
       case '--steps':
         if (value) {
           if (typeof value === 'number') {
@@ -242,6 +273,7 @@ function parseArguments() {
           }
         }
         break;
+      case '-w':
       case '--whileinterval':
         if (value){
           const vt = parseInt(value, 10);
@@ -273,6 +305,7 @@ function parseArguments() {
           options.output = value;
         }
         break;
+      case '-k':
       case '--stacktrace':
         if (value){
           options.stacktrace = value;
@@ -289,21 +322,21 @@ function parseArguments() {
         console.log('    --> INVALID ARGUMENT `'+key+'` PROVIDED ...! Try again with valid arguments.');
         showHelp = true;
     }
-  });
-
-  if (showHelp !== false){
-    console.log('\n    '+name+' - '+description+' .\n');
-    console.log('    version - '+version+'\n');
-    process.exit(2);
   }
+  if (showHelp) {
+    const optsString = opts.join('');
+    if (['-v', '-V', '--version'].indexOf(optsString) !== -1) {
+      return 2
+    }
+  }
+  return showHelp;
 }
 
 const filesMap = {};
 
 function getArp(jsondir, fn) {
   const bname = basename(fn);
-  if (filesMap[bname]) return filesMap[bname];
-  const ar = [bname];
+  if (filesMap[bname]) return filesMap[bname]; const ar = [bname];
   try {
     ar.push(require(`${jsondir}/${bname}`));
   } catch(er) {
@@ -477,11 +510,7 @@ exports.getOptions = function getOptions(options) {
     OPTS.fileArray.forEach(afterResolve.bind(null, options.jsondir));
   }
 
-  if (options.bail !== 0) {
-    OPTS.bail = 1;
-  }
-
-  if (options.stacktrace !== 1) {
+  if (String(options.stacktrace) !== '1') {
     OPTS.stacktrace = 0;
   }
 

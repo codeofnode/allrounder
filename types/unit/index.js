@@ -1,5 +1,5 @@
 const { getReqObj } = require('../../commonMethods');
-const { join, isAbsolute } = require('path');
+const { join, sep, isAbsolute } = require('path');
 const CWD = process.cwd();
 
 const exec = function exec(method, context, payload, construct, isAsync, cb) {
@@ -49,7 +49,10 @@ module.exports = function forTC(OPTS, test, fileData, done, noti) {
   }
   noti('UNIT_TEST', reqObj);
   let unit;
-  const requi = test.require || fileData[1].require;
+  let requi = test.require || fileData[1].require;
+  if (!requi && OPTS.srcdir) {
+    requi = join(CWD, OPTS.srcdir, testcase.runner.filePath.split(sep).slice(1).join(sep));
+  }
   if (requi) {
     const path = OPTS.replace(requi, vars, methods);
     if (typeof path === 'string') {

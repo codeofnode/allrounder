@@ -4,8 +4,71 @@ const Mocha = require('mocha');
 const path = require('path');
 const os = require('os');
 const { mkdirSync, writeFileSync } = require('fs');
+const { name, version, description } = require('../package.json');
 const { options, getOptions, parseArguments } = require('../extractArgs');
-parseArguments();
+const showHelp = parseArguments();
+
+if (showHelp === undefined || showHelp) {
+  if (showHelp === 2) {
+    console.log(version);
+    process.exit(0);
+  }
+  console.log('');
+  console.log('    '+name+' - '+description);
+  console.log('    version - '+version);
+  console.log('');
+  console.log('    Usage:                      '+name+' [options] my-test-file.json/my-test-dir^1');
+  console.log('    OR to make http(s) call:    '+name+' [options] -e [method=GET] https://myrestcallurl?withquery=parametersifany [headers^2] [payload^2]');
+  console.log('');
+  console.log('    Options:');
+  console.log('      -r, --read [value]        : Read the configuration from a json file, rather than passing from command line.^1');
+  console.log('      -f, --file [value]        : The json file which contains the set of tests (a test suite) you want to execute.^1');
+  console.log('      -j, --jsondir [value]     : The directory which contains the set of json files each of which is a test suite.^1');
+  console.log('      -b, --bail                : If present, it will exit upon the first failure and ignore the rest.');
+  console.log('      -i, --insecure            : If present, it will do self signed https request, if found any.^3');
+  console.log('      -z, --vars [value]        : Passing initializing variables that replaces variables and prepare test case.^2');
+  console.log('      -m, --mocha [value]       : Passing configuration that will be passed to mocha.^2');
+  console.log('      -n, --debugonfail [value] : What things to print upon a test case is failed.^5');
+  console.log('      -d, --debug [value]       : What things to print for each and every test case.^5');
+  console.log('      -o, --timeout <int>       : The timeout value that will abort testcase, if not finished in <value> miliseconds');
+  console.log('      -w, --whileinterval <int> : Miliseconds to wait for betweeen while loop iterations.');
+  console.log('      -t, --type [value]        : What kind of test case if type if not present in testcase or testsuite.');
+  console.log('                                    Should be on of rest,unit,db,command.');
+  console.log('      -u, --utility [value]     : The javascript filepath that will have utility functions.^1');
+  console.log('                                    It will be used for replacing method variables in test cases.');
+  console.log('      -s, --srcdir [value]      : The source directory^1, which will be used to map the unit test file to corresponding source file');
+  console.log('                                    used only if require entry is missing from unit test.');
+  console.log('      -p, --pipe [value]        : Taking input variables from a file and save the output variables to it after execution finishes.^1');
+  console.log('      -k, --stacktrace [0/1]    : Whether to print stacktrace upon failure, useful for debugging unit tests.');
+  console.log('      --steps                   : Passing the indexes (0 based) to select test cases from the testsuite, to execute.^4');
+  console.log('      --output [value]          : Passing variables saved after exeuction is finished and writes those into a file.^1');
+  console.log('                                    Can be used in automation environement, to keep track of values used for test case execution.');
+  console.log('                                    Bewarned if you are using any passwords or sensitive data in variable with this option.');
+  console.log('      -h, --help                : To see this help.');
+  console.log('')
+  console.log('')
+  console.log('Notes:');
+  console.log('  1. Value asks file (or may be directory) path, if not absolute, will be resolved as relative path from current working directory.');
+  console.log('  2. Value can be a string as stringified json eg: \'{"key1":"value1","key2":"value2"}\'');
+  console.log('     or a json filepath that contains jsonified content eg: \'headers.json\' or \'/absolute/path/for/headers.json\'');
+  console.log('     or string which contains comma separated key:value pairs, where key value are separated by colon eg \'key1:value1,key2:value2\'');
+  console.log('  3. It will set process.env.NODE_TLS_REJECT_UNAUTHORIZED = \'0\'');
+  console.log('  4. To execute 6th, 7th, 8th, 9th and 10th test cases from each testsuite. In format: --steps 5-9');
+  console.log('  5. Debugging can use one or many from: url,parsed,payload,headers,method,statusCode');
+  console.log('     To use internal and specific values, use jsonpath to select specific field to print. eg url,parsed.specificFieldInResponse');
+  console.log('')
+  console.log('Examples:');
+  console.log('  # A GET request with header :');
+  console.log('     $ '+name+' -e http://api.myserver.com/v1/users "Authorization:Bearer xyz"');
+  console.log('  # A POST request with header and payload :');
+  console.log('     $ '+name+' -e POST http://api.myserver.com/v1/users "Authorization:Bearer xyz" "name:codeofnode"');
+  console.log('  # tests your json file :');
+  console.log('     $ '+name+' my-test.json');
+  console.log('  # tests all the json files in the directory :');
+  console.log('     $ '+name+' my-test-dir ');
+  console.log('')
+  process.exit(2);
+}
 Object.assign(options, getOptions(options));
 
 const mochaOptions = options.mocha || {};
