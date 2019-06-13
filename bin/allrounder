@@ -83,22 +83,22 @@ if (mochaOptions.fullStackTrace === undefined) {
 }
 mochaOptions.reporterOptions = Object.assign({ output: options.output }, mochaOptions.reporterOptions);
 const mocha = new Mocha(mochaOptions);
-mocha.addFile(path.join(__dirname, '../test'));
+mocha.addFile(path.join(__dirname, '../mocha-test'));
 
 const resolveFile = function resolveFile(cb){
   if (options.file instanceof Promise) {
     options.file.then(function(resp){
       const tmpdir = os.tmpdir();
       try {
-        mkdirSync(`${tmpdir}/allroundertests`);
+        mkdirSync(path.join(tmpdir, 'allroundertests'));
       } catch (er) {
         if (er.code !== 'EEXIST') {
           throw er;
         }
       }
-      options.file = `${tmpdir}/allroundertests/test.json`;
+      options.file = path.join(tmpdir, 'allroundertests', 'test.json');
       writeFileSync(options.file, JSON.stringify(resp, undefined, 2));
-      options.fileArray = [['test.json', resp, { EVAL: eval }]];
+      options.fileArray = [[options.file, resp, { EVAL: eval }]];
       cb();
     }).catch(function(er){
       console.log(er);

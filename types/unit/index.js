@@ -51,7 +51,7 @@ module.exports = function forTC(OPTS, test, fileData, done, noti) {
   let unit;
   let requi = test.require || fileData[1].require;
   if (!requi && OPTS.srcdir) {
-    requi = join(isAbsolute(OPTS.srcdir) ? OPTS.srcdir : join(CWD, OPTS.srcdir), fileData[0].split('.').shift())
+    requi = fileData[0].split('.'+OPTS.speckey + '.json').shift()
   }
   if (requi) {
     const path = OPTS.replace(requi, vars, methods);

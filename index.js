@@ -1,5 +1,5 @@
 const { getOptions } = require('./extractArgs');
-const { basename } = require('path');
+const { basename } = require('path')
 const { cropString } = require('./utils');
 const { URL } = require('url');
 
@@ -215,9 +215,8 @@ exports.start = function start(){
     afterEach(OPTS.afterEach);
   }
   OPTS.fileArray.forEach((fileData) => {
-    const flnm = fileData[0].split('.').shift();
-    if (!fileData[1].disabled && (!OPTS.file || basename(OPTS.file) === fileData[0])) {
-      describe(fileData[1].testsuite || fileData[1].scenario || flnm, function(){
+    if (!fileData[1].disabled && (!OPTS.file || OPTS.file === fileData[0])) {
+      describe(fileData[1].testsuite || fileData[1].scenario || basename(fileData[0].split('.').shift()), function(){
         exports.forTS.call(this, fileData);
       });
     }

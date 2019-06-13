@@ -1,6 +1,22 @@
 const jsonpath = require('jsonpath');
 const { methods } = require('json2server');
+const { join } = require('path');
+const { readdirSync, statSync } = require('fs');
 const { replace, request, stringify } = methods;
+
+exports.listAllFiles = function listAllFiles(dir, fileFilter, filelist) {
+  let files = readdirSync(dir);
+  filelist = filelist || [];
+  files.forEach(function(file) {
+    if (statSync(join(dir, file)).isDirectory()) {
+      filelist = exports.listAllFiles(join(dir, file), fileFilter, filelist);
+    } else if ((typeof fileFilter === 'function' && fileFilter(file)) ||
+        (typeof fileFilter === 'string' && file.endsWith(fileFilter))) {
+      filelist.push(join(dir, file));
+    }
+  });
+  return filelist;
+};
 
 /**
  * Logger to log the request/command and response

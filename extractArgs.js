@@ -1,10 +1,10 @@
-const { join, isAbsolute, basename, dirname } = require('path');
+const { join, isAbsolute, basename, dirname, sep } = require('path');
 const { methods } = require('json2server');
 const EventEmitter = require('events');
 const { request } = methods;
 const cwd = process.cwd();
 const os = require('os');
-const { mkdirSync, readdirSync } = require('fs');
+const { readdirSync } = require('fs');
 const utils = require('./utils');
 
 const options = { };
@@ -305,10 +305,20 @@ function parseArguments() {
           options.output = value;
         }
         break;
+      case '--speckey':
+        if (value){
+          options.speckey = value;
+        }
+        break;
       case '-k':
       case '--stacktrace':
-        if (value){
-          options.stacktrace = value;
+        if (value !== undefined) {
+          if (['0', '1', 0, 1].indexOf(value) === -1) {
+            options.stacktrace = 1;
+            k--;
+          } else {
+            options.stacktrace = value;
+          }
         }
         break;
       case '-h':
@@ -333,26 +343,29 @@ function parseArguments() {
 }
 
 const filesMap = {};
+let jsondir = cwd;
 
-function getArp(jsondir, fn) {
-  const bname = basename(fn);
-  if (filesMap[bname]) return filesMap[bname]; const ar = [bname];
+function getArp(fn) {
+  let fullpath = fn;
+  if (fn.indexOf(sep) === -1) fullpath = join(jsondir, fn);
+  if (filesMap[fullpath]) return filesMap[fullpath];
+  const ar = [fullpath];
   try {
-    ar.push(require(`${jsondir}/${bname}`));
+    ar.push(require(fullpath));
   } catch(er) {
     ar.push({ tests : [] });
   }
   try {
-    let base = bname.split('.');
+    let base = basename(fullpath).split('.');
     base.pop();
     base = base.join('.');
-    ar.push(require(`${jsondir}/${base}.js`));
+    ar.push(require(join(dirname(fullpath), `${base}.${options.speckey}.js`)));
   } catch(er) {
     ar.push({});
   }
   ar[2] = Object.assign({}, globalMethods, ar[2]);
   ar.push(JSON.stringify(ar[1]));
-  filesMap[bname] = ar;
+  filesMap[fullpath] = ar;
   return ar;
 }
 
@@ -390,7 +403,7 @@ function resolveJson (vars, replace, fa) {
         if (!tests[z].import.endsWith('.json')) {
           tests[z].import += '.json';
         }
-        let arp = getArp(options.jsondir, tests[z].import);
+        let arp = getArp(tests[z].import);
         let ar = JSON.parse(arp[3]);
         if (tests[z].fetchVars !== false) {
           if (typeof ar.vars === 'object' && ar.vars !== null) {
@@ -446,8 +459,8 @@ function resolveJson (vars, replace, fa) {
   }
 }
 
-function afterResolve(jsondir, fa) {
-  getArp(jsondir, fa[0]).pop();
+function afterResolve(fa) {
+  getArp(fa[0]).pop();
 }
 
 /**
@@ -485,18 +498,27 @@ exports.getOptions = function getOptions(options) {
 
   if ((typeof options.jsondir !== 'string' || !options.jsondir.length)
     && (typeof options.file === 'string' && options.file.length)) {
-    options.jsondir = dirname(options.file);
+    options.jsondir = jsondir = dirname(options.file);
+  }
+
+  if (typeof options.speckey === 'string' && options.speckey.length) {
+    OPTS.speckey = options.speckey;
+  } else {
+    OPTS.speckey = options.speckey = 'spec';
   }
 
   if (typeof options.file === 'string' && options.file.length) {
-    OPTS.fileArray = [getArp(options.jsondir, options.file)];
+    OPTS.fileArray = [getArp(options.file)];
   } else if (typeof options.jsondir === 'string' && options.jsondir.length) {
-    OPTS.fileArray = readdirSync(options.jsondir)
-      .filter(fn => fn.endsWith('.json'))
-      .sort()
-      .map(getArp.bind(null, options.jsondir));
+    jsondir = options.jsondir;
+    OPTS.fileArray = utils.listAllFiles(options.jsondir, 'json').map(getArp);
   } else if (!(options.file instanceof Promise)) {
-    throw new Error('`jsondir` must be present in the options.');
+    if (typeof options.srcdir === 'string' && options.srcdir.length) {
+      options.jsondir = jsondir = options.srcdir;
+      OPTS.fileArray = utils.listAllFiles(options.srcdir, OPTS.speckey+'.json').map(getArp);
+    } else {
+      throw new Error('`jsondir` must be present in the options.');
+    }
   }
 
   let vars = {};
@@ -507,7 +529,7 @@ exports.getOptions = function getOptions(options) {
 
   if (typeof options.jsondir === 'string' && options.jsondir.length) {
     OPTS.fileArray.forEach(resolveJson.bind(null, vars, OPTS.replace));
-    OPTS.fileArray.forEach(afterResolve.bind(null, options.jsondir));
+    OPTS.fileArray.forEach(afterResolve);
   }
 
   if (String(options.stacktrace) !== '1') {
