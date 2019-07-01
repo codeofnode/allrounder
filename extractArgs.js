@@ -401,9 +401,9 @@ function resolveJson (vars, replace, fa) {
       const steps = tests[z].steps;
       if (typeof tests[z].import === 'string' && !replace(tests[z].disabled, Object.assign(fl.vars || {}, vars), globalMethods)) {
         if (!tests[z].import.endsWith('.json')) {
-          tests[z].import += '.json';
+          tests[z].import += (options.srcdir ? ('.'+options.speckey) : '') + '.json';
         }
-        let arp = getArp(tests[z].import);
+        let arp = getArp(isAbsolute(tests[z].import) ? tests[z].import : join(dirname(fa[0]), tests[z].import));
         let ar = JSON.parse(arp[3]);
         if (tests[z].fetchVars !== false) {
           if (typeof ar.vars === 'object' && ar.vars !== null) {

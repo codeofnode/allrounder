@@ -1,0 +1,111 @@
+{
+  "type": "unit",
+  "tests" : [
+    {
+      "summary": "Requiring the file",
+      "request": {
+        "method": "default"
+      },
+      "assertions": {
+        "error": {}
+      }
+    },
+    {
+      "require": "immutable",
+      "summary": "Getting first immutable object",
+      "request": {
+        "method": "fromJS",
+        "params": {
+          "todos": {
+          }
+        }
+      },
+      "assertions": {
+        "error": null
+      },
+      "extractors": {
+        "state": "output"
+      }
+    },
+    {
+      "summary": "Adding an entry",
+      "request": {
+        "method": "default",
+        "params": [
+          "{{state}}",
+          {
+            "type": "ADD",
+            "todo": "todo 1"
+          }
+        ]
+      },
+      "assertions": {
+        "error": null,
+        "output.size": 2,
+        "output._root.entries.0.1.size": 1
+      },
+      "extractors": {
+        "todo1Id": "output._root.entries.1.1"
+      }
+    },
+    {
+      "summary": "Updating an entry",
+      "request": {
+        "method": "default",
+        "params": [
+          "{{state}}",
+          {
+            "type": "EDIT",
+            "id": "{{todo1Id}}",
+            "patch": {
+              "todo": "todo 1"
+            }
+          }
+        ]
+      },
+      "assertions": {
+        "error": null,
+        "output._root.entries.0.1._root.entries.0.1.todo": "todo 1"
+      }
+    },
+    {
+      "summary": "Deleting an entry",
+      "request": {
+        "method": "default",
+        "params": [
+          "{{state}}",
+          {
+            "type": "DELETE",
+            "id": "{{todo1Id}}"
+          }
+        ]
+      },
+      "assertions": {
+        "error": null,
+        "output.size": 1,
+        "output._root.entries.0.1.size": 0
+      }
+    },
+    {
+      "import": "reducer",
+      "steps": 2
+    },
+    {
+      "summary": "Deleting all",
+      "request": {
+        "method": "default",
+        "params": [
+          "{{state}}",
+          {
+            "type": "DELETE_ALL"
+          }
+        ]
+      },
+      "assertions": {
+        "error": null,
+        "output.size": 1,
+        "output._root.entries.0.1.size": 0
+      }
+    }
+  ]
+}

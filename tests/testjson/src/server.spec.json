@@ -1,0 +1,22 @@
+{
+  "type": "unit",
+  "tests" : [
+    {
+      "summary": "Requiring the file",
+      "request": {
+        "method": "default"
+      },
+      "assertions": {
+        "error": {}
+      }
+    },
+    {
+      "type": "command",
+      "summary": "port 8080 should be listening",
+      "request": ""
+      "assertions": {
+        "error": {}
+      }
+    }
+  ]
+}

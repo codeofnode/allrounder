@@ -10,6 +10,7 @@ if [ ! -d testrepo ]; then
   npm install
 fi
 
+find testrepo -name "*.spec.json" -type f -delete
 rsync -a testjson/ testrepo/
 
 $DIR/testrepo/node_modules/.bin/babel-node $DIR/../bin/allrounder $@ -s testrepo
