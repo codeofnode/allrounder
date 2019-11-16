@@ -180,10 +180,10 @@ function parseArguments() {
           options.file = getStringValue(value, true);
         }
         break;
-      case '-r':
-      case '--read':
+      case '-c':
+      case '--conf':
         if (value) {
-          options.read = getStringValue(read, true);
+          options.confs = getStringValue(value, true);
         }
         break;
       case '-j':
@@ -481,9 +481,7 @@ function afterResolve(fa) {
  */
 exports.getOptions = function getOptions(options) {
   const OPTS = {};
-  if (!options.read){
-    const readFile = join(cwd, 'allrounder.json');
-  }
+  const readFile = options.confs || join(cwd, 'allrounder.json');
   let read = {};
   try {
     read = require(readFile);

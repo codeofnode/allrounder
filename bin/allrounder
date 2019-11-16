@@ -21,7 +21,7 @@ if (showHelp === undefined || showHelp) {
   console.log('    OR to make http(s) call:    '+name+' [options] -e [method=GET] https://myrestcallurl?withquery=parametersifany [headers^2] [payload^2]');
   console.log('');
   console.log('    Options:');
-  console.log('      -r, --read [value]        : Read the configuration from a json file, rather than passing from command line.^1');
+  console.log('      -c, --conf [value]        : Read the configuration from a json file, rather than passing from command line.^1');
   console.log('      -f, --file [value]        : The json file which contains the set of tests (a test suite) you want to execute.^1');
   console.log('      -j, --jsondir [value]     : The directory which contains the set of json files each of which is a test suite.^1');
   console.log('      -b, --bail                : If present, it will exit upon the first failure and ignore the rest.');
@@ -33,7 +33,7 @@ if (showHelp === undefined || showHelp) {
   console.log('      -o, --timeout <int>       : The timeout value that will abort testcase, if not finished in <value> miliseconds');
   console.log('      -w, --whileinterval <int> : Miliseconds to wait for betweeen while loop iterations.');
   console.log('      -t, --type [value]        : What kind of test case if type if not present in testcase or testsuite.');
-  console.log('                                    Should be on of rest,unit,db,command.');
+  console.log('                                    Should be one of rest,unit,db,command.');
   console.log('      -u, --utility [value]     : The javascript filepath that will have utility functions.^1');
   console.log('                                    It will be used for replacing method variables in test cases.');
   console.log('      -s, --srcdir [value]      : The source directory^1, which will be used to map the unit test file to corresponding source file');
