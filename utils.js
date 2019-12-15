@@ -60,22 +60,20 @@ exports.cropString = function cropString(str, ln = 100) {
 
 exports.jsonquery = function jsonquery(data, path) {
   let res = data;
-  if (typeof data === 'object' && data !== null) {
-    if (path.indexOf('LEN()<') === 0) {
-      return jsonpath.query(data, path.substring(6)).length;
-    } else if(typeof path === 'string' && path.indexOf('TYPEOF<') === 0) {
-      return (typeof jsonpath.query(data, path.substring(7))[0]);
-    } else if (path.indexOf('ARRAY<') === 0) {
-      return jsonpath.query(data, path.substring(6));
-    } else if (path.indexOf('<') === 5) {
-      const count = parseInt(path.substr(0, 5), 10);
-      if (!isNaN(count)) {
-        return jsonpath.query(data, path.substring(6), count);
-      }
+  if (path.indexOf('LEN()<') === 0) {
+    return jsonpath.query(data, path.substring(6)).length;
+  } else if(typeof path === 'string' && path.indexOf('TYPEOF<') === 0) {
+    return (typeof jsonpath.query(data, path.substring(7))[0]);
+  } else if (path.indexOf('ARRAY<') === 0) {
+    return jsonpath.query(data, path.substring(6));
+  } else if (path.indexOf('<') === 5) {
+    const count = parseInt(path.substr(0, 5), 10);
+    if (!isNaN(count)) {
+      return jsonpath.query(data, path.substring(6), count);
     }
-    res = jsonpath.query(data, path, 1);
-    res = (Array.isArray(res) && res.length < 2) ? res[0] : res;
   }
+  res = jsonpath.query(data, path, 1);
+  res = (Array.isArray(res) && res.length < 2) ? res[0] : res;
   return res;
 };
 

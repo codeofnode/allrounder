@@ -77,6 +77,7 @@ module.exports = function forTC(OPTS, test, fileData, done, noti) {
   } else {
     unit = global;
   }
+  if (typeof reqObj.method !== 'string') return callback({ error: null, output: true })
   const method = OPTS.jsonquery(unit, OPTS.replace(reqObj.method, vars, methods));
   let payload = (reqObj.payload === undefined) ? [] : OPTS.replace(reqObj.payload, vars, methods);
   if (!Array.isArray(payload)) { payload = [payload]; }
