@@ -216,7 +216,7 @@ exports.start = function start(){
   }
   OPTS.fileArray.forEach((fileData) => {
     if (!fileData[1].disabled && (!OPTS.file || OPTS.file === fileData[0])) {
-      describe(fileData[1].testsuite || fileData[1].scenario || basename(fileData[0].split('.').shift()), function(){
+      describe(fileData[1].testsuite || fileData[1].scenario || fileData[0].split(OPTS.jsondir)[1], function(){
         exports.forTS.call(this, fileData);
       });
     }
