@@ -385,13 +385,14 @@ function getNthActiveElement(ar, ind, retInd) {
   }
 }
 
-function createNewStep(require, og, ae) {
+function createNewStep(prefixedObject, og, ae) {
   if (typeof ae !== 'object' || ae === null || typeof og !== 'object' || og === null) return ae;
-  return Object.assign(ae, {
-    require: require,
+  return Object.assign({}, ae, {
     neg: ae.neg === undefined ? og.neg : ae.neg,
+    summary: prefixedObject.summaryPrefix ? prefixedObject.summaryPrefix + ' > ' + (ae.summary || ae.import) : ae.summary,
+    require: ae.require || ae.import || prefixedObject.fixRequire,
     condition: ae.condition === undefined ? og.condition : (og.condition ? `(${og.condition}) && (${ae.condition})` : ae.condition),
-  });
+  })
 }
 
 function resolveJson (vars, replace, fa) {
@@ -402,10 +403,12 @@ function resolveJson (vars, replace, fa) {
     for (let z = 0; z < ln; z++) {
       const steps = tests[z].steps;
       if (typeof tests[z].import === 'string' && !replace(tests[z].disabled, Object.assign(fl.vars || {}, vars), globalMethods)) {
-        let fixRequire = tests[z].require || (fl.type === 'unit' ? tests[z].import : undefined)
+        const fixRequire = tests[z].require || (fl.type === 'unit' ? tests[z].import : undefined)
+        const summaryPrefix = tests[z].summary || tests[z].import
         if (!tests[z].import.endsWith('.json')) {
           tests[z].import += (options.srcdir ? ('.'+options.speckey) : '') + '.json';
         }
+        const prefixedObject = { fixRequire, summaryPrefix }
         let arp = getArp(isAbsolute(tests[z].import) ? tests[z].import : join(dirname(fa[0]), tests[z].import));
         let ar = JSON.parse(arp[3]);
         if (tests[z].fetchVars !== false) {
@@ -430,7 +433,7 @@ function resolveJson (vars, replace, fa) {
             if (Array.isArray(steps)) {
               steps.forEach(st => {
                 if (typeof st === 'number' && ar[st]) {
-                  let toPush = createNewStep(fixRequire, tests[z], getNthActiveElement(ar, st));
+                  let toPush = createNewStep(prefixedObject, tests[z], getNthActiveElement(ar, st));
                   if (toPush) art.push(toPush);
                 }
               });
@@ -439,17 +442,17 @@ function resolveJson (vars, replace, fa) {
               let ffrom = getNthActiveElement(ar, steps.from || 0, true);
               let fto = typeof steps.to !== 'number' ? ar.length - 1 : getNthActiveElement(ar, steps.to, true);
               for (let st = ffrom; ar[st] && st <= fto; st++) {
-                let toPush = createNewStep(fixRequire, tests[z], ar[st]);
+                let toPush = createNewStep(prefixedObject, tests[z], ar[st]);
                 if (toPush) art.push(toPush);
               }
             } else if (typeof steps === 'number' && ar[steps]) {
-              const toPush = createNewStep(fixRequire, tests[z], getNthActiveElement(ar, steps));
+              const toPush = createNewStep(prefixedObject, tests[z], getNthActiveElement(ar, steps));
               if (toPush) art.push(toPush);
             }
             ar = art;
             tests.splice.bind(tests, z, 1).apply(tests, ar);
           } else {
-            tests.splice.bind(tests, z, 1).apply(tests, ar.map(createNewStep.bind(null, fixRequire, tests[z])));
+            tests.splice.bind(tests, z, 1).apply(tests, ar.map(createNewStep.bind(null, prefixedObject, tests[z])));
           }
           if (preVars && tests[z]) tests[z].vars = Object.assign(preVars, tests[z].vars);
           ln += ar.length - 1;
