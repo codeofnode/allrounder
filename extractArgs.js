@@ -370,6 +370,7 @@ function getArp(fn) {
 }
 
 function getTests(fl) {
+  if (!fl.type && fl.require) fl.type = 'unit'
   return fl.tests || fl.testcases || fl.steps || fl.entries || fl.records;
 }
 
@@ -384,9 +385,10 @@ function getNthActiveElement(ar, ind, retInd) {
   }
 }
 
-function createNewStep(og, ae) {
+function createNewStep(require, og, ae) {
   if (typeof ae !== 'object' || ae === null || typeof og !== 'object' || og === null) return ae;
   return Object.assign(ae, {
+    require: require,
     neg: ae.neg === undefined ? og.neg : ae.neg,
     condition: ae.condition === undefined ? og.condition : (og.condition ? `(${og.condition}) && (${ae.condition})` : ae.condition),
   });
@@ -400,6 +402,7 @@ function resolveJson (vars, replace, fa) {
     for (let z = 0; z < ln; z++) {
       const steps = tests[z].steps;
       if (typeof tests[z].import === 'string' && !replace(tests[z].disabled, Object.assign(fl.vars || {}, vars), globalMethods)) {
+        let fixRequire = tests[z].require || (fl.type === 'unit' ? tests[z].import : undefined)
         if (!tests[z].import.endsWith('.json')) {
           tests[z].import += (options.srcdir ? ('.'+options.speckey) : '') + '.json';
         }
@@ -427,7 +430,7 @@ function resolveJson (vars, replace, fa) {
             if (Array.isArray(steps)) {
               steps.forEach(st => {
                 if (typeof st === 'number' && ar[st]) {
-                  let toPush = createNewStep(tests[z], getNthActiveElement(ar, st));
+                  let toPush = createNewStep(fixRequire, tests[z], getNthActiveElement(ar, st));
                   if (toPush) art.push(toPush);
                 }
               });
@@ -436,17 +439,17 @@ function resolveJson (vars, replace, fa) {
               let ffrom = getNthActiveElement(ar, steps.from || 0, true);
               let fto = typeof steps.to !== 'number' ? ar.length - 1 : getNthActiveElement(ar, steps.to, true);
               for (let st = ffrom; ar[st] && st <= fto; st++) {
-                let toPush = createNewStep(tests[z], ar[st]);
+                let toPush = createNewStep(fixRequire, tests[z], ar[st]);
                 if (toPush) art.push(toPush);
               }
             } else if (typeof steps === 'number' && ar[steps]) {
-              toPush = createNewStep(tests[z], getNthActiveElement(ar, steps));
+              const toPush = createNewStep(fixRequire, tests[z], getNthActiveElement(ar, steps));
               if (toPush) art.push(toPush);
             }
             ar = art;
             tests.splice.bind(tests, z, 1).apply(tests, ar);
           } else {
-            tests.splice.bind(tests, z, 1).apply(tests, ar.map(createNewStep.bind(null, tests[z])));
+            tests.splice.bind(tests, z, 1).apply(tests, ar.map(createNewStep.bind(null, fixRequire, tests[z])));
           }
           if (preVars && tests[z]) tests[z].vars = Object.assign(preVars, tests[z].vars);
           ln += ar.length - 1;

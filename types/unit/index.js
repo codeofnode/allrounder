@@ -62,7 +62,7 @@ module.exports = function forTC(OPTS, test, fileData, done, noti) {
         unit = require(path);
       } else {
         try {
-          unit = require(require.resolve(path, { paths : [OPTS.jsondir] }));
+          unit = require(join(OPTS.jsondir, path));
         } catch (er) {
           try {
             unit = require(path);
