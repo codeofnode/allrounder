@@ -31,12 +31,7 @@ exports.logger = function logger(test, debug, debugonfail, header, data) {
     let toDebug = false;
     ((debug ? (debug + ',') : '') + (debugonfail || '')).split(',').forEach((db) => {
       if (db.length){
-        let queryVal
-        if (typeof data === "object") {
-          queryVal = exports.jsonquery(data, db);
-        } else {
-          queryVal = data
-        }
+        let queryVal = exports.jsonquery(data, db);
         if (queryVal !== undefined) {
           qr.push([db, queryVal]);
           toDebug = true;
@@ -77,7 +72,9 @@ exports.jsonquery = function jsonquery(data, path) {
       return jsonpath.query(data, path.substring(6), count);
     }
   }
-  res = jsonpath.query(data, path, 1);
+  if (data instanceof Object && typeof path === 'string' && path) {
+    res = jsonpath.query(data, path, 1);
+  }
   res = (Array.isArray(res) && res.length < 2) ? res[0] : res;
   return res;
 };
