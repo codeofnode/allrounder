@@ -389,7 +389,7 @@ function createNewStep(prefixedObject, og, ae) {
   if (typeof ae !== 'object' || ae === null || typeof og !== 'object' || og === null) return ae;
   return Object.assign({}, ae, {
     neg: ae.neg === undefined ? og.neg : ae.neg,
-    summary: prefixedObject.summaryPrefix ? prefixedObject.summaryPrefix + ' > ' + (ae.summary || ae.import) : ae.summary,
+    summary: prefixedObject.summaryPrefix ? prefixedObject.summaryPrefix + ' => ' + (ae.summary || ae.import) : ae.summary,
     require: ae.require || ae.import || prefixedObject.fixRequire,
     condition: ae.condition === undefined ? og.condition : (og.condition ? `(${og.condition}) && (${ae.condition})` : ae.condition),
   })
