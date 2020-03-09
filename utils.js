@@ -31,7 +31,12 @@ exports.logger = function logger(test, debug, debugonfail, header, data) {
     let toDebug = false;
     ((debug ? (debug + ',') : '') + (debugonfail || '')).split(',').forEach((db) => {
       if (db.length){
-        let queryVal = exports.jsonquery(data, db);
+        let queryVal
+        if (typeof data === "object") {
+          queryVal = exports.jsonquery(data, db);
+        } else {
+          queryVal = data
+        }
         if (queryVal !== undefined) {
           qr.push([db, queryVal]);
           toDebug = true;
