@@ -99,6 +99,7 @@ const resolveFile = function resolveFile(cb){
       options.file = path.join(tmpdir, 'allroundertests', 'test.json');
       options.jsondir = path.join(tmpdir, 'allroundertests');
       writeFileSync(options.file, JSON.stringify(resp, undefined, 2));
+      if (Array.isArray(resp.tests)) resp.tests.forEach((tt,ind) => { tt.ARtestIndex = ind; });
       options.fileArray = [[options.file, resp, { EVAL: eval }]];
       cb();
     }).catch(function(er){
