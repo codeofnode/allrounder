@@ -62,7 +62,7 @@ module.exports = function mongodb(reqObj, dbConfig, next) {
       }
       const query = reqObj.payload;
       let col;
-      try { col = db.collection(query && query.collection); } catch(erm){ }
+      try { col = db.collection(query && query.collection); } catch(erm){ console.log(erm) }
       if (!col){
         return next({error : "Collection not available", code : 'COL_NOT_AVL', status : 400 });
       }
@@ -119,6 +119,7 @@ module.exports = function mongodb(reqObj, dbConfig, next) {
   if (connectionMap.hasOwnProperty(dbConfig.connectionName)) {
     afterConnection(null, connectionMap[dbConfig.connectionName]);
   } else {
+    dbConfig.options = Object.assign({ useUnifiedTopology: true }, dbConfig.options || {})
     MongoClient.connect(dbConfig.dbUrl, dbConfig.options, afterConnection);
   }
 };
