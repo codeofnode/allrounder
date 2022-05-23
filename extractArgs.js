@@ -109,6 +109,14 @@ function parseReq(splits) {
       }
       break;
     default:
+      if (splits[1].indexOf('caFile=') === 0) {
+        request.caFile = splits[1].substring(7);
+        splits.splice(1, 1);
+      }
+      if (splits[1].indexOf('http2=') === 0) {
+        request.http2Options = getObjectFromFileOrArgument(splits[1].substring(6));
+        splits.splice(1, 1);
+      }
       if (splits[1].indexOf('http') === 0) {
         splits.splice(1, 0, 'GET');
       }
