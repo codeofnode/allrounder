@@ -38,11 +38,11 @@ function ifConditionFailed(condition){
   }
 }
 
-function resolveWhile(inputwhile, OPTS, ts){
+function resolveWhile(inputwhile, OPTS, ts, vars, methods){
   if (typeof inputwhile === 'string') {
     return {
       while : inputwhile,
-      interval: typeof ts.whileinterval === 'number' ? ts.whileinterval : OPTS.whileinterval
+      interval: ts.whileinterval !== undefined ?  OPTS.replace(ts.whileinterval, vars, methods) : OPTS.replace(OPTS.whileinterval, vars, methods)
     };
   } else if (typeof inputwhile === 'object' && inputwhile !== null
     && typeof inputwhile.while === 'string' && typeof inputwhile.interval === 'number') {
@@ -129,7 +129,7 @@ exports.forTS = function forTS(fileData) {
                 require(`./types/${test.type || fileData[1].type || OPTS.type}`)
                   .call(that, OPTS, test, fileData, cb, OPTS.logger.bind(OPTS, that.test, getFinalDebug(currDebug, mainDebug, OPTS.debug), getFinalDebug(currDebugOnFail, mainDebugOnFail, OPTS.debugonfail)));
               }
-              const resolvedwhile = resolveWhile(test.while, OPTS, fileData[1]);
+              const resolvedwhile = resolveWhile(test.while, OPTS, fileData[1], vars, methods);
               if (resolvedwhile) {
                 that.ARshouldClone = true;
                 function loopingFunction(curIndex){
@@ -153,7 +153,7 @@ exports.forTS = function forTS(fileData) {
               tto = false;
             }
             if (sleep) {
-              that.timeout(sleep + (tto || OPTS.timeout || 2000));
+              that.timeout(sleep + (tto || fileData[1].timeout  || OPTS.timeout || 2000));
               setTimeout(execNow, sleep);
             } else {
               if (tto) that.timeout(tto);
